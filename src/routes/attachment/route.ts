@@ -26,22 +26,6 @@ function generateTimestampFilename(originalFilename?: string): string {
   return `${timestamp}-${uuid}${extension}`;
 }
 
-// Helper function to encode filename for Content-Disposition header
-// Handles Unicode characters according to RFC 5987
-function encodeContentDisposition(filename: string): string {
-  // Check if filename contains non-ASCII characters
-  const hasNonAscii = /[^\x00-\x7F]/.test(filename);
-
-  if (hasNonAscii) {
-    // Use RFC 5987 encoding: filename*="UTF-8''encoded-filename"
-    const encoded = encodeURIComponent(filename);
-    return `attachment; filename*=UTF-8''${encoded}`;
-  } else {
-    // For ASCII-only filenames, use simple format
-    return `attachment; filename="${filename}"`;
-  }
-}
-
 const attachmentApp = new OpenAPIHono({
   defaultHook: (result, c) => {
     if (!result.success) {
@@ -87,7 +71,6 @@ attachmentApp.openapi(createAttachment, async (c) => {
     const r2UploadResult = await ctx.env.R2.put(filename, fileBuffer, {
       httpMetadata: {
         contentType: file.type || "application/octet-stream",
-        contentDisposition: encodeContentDisposition(file.name || filename),
       },
       customMetadata: {
         originalFilename: file.name || "",
@@ -150,18 +133,9 @@ attachmentApp.openapi(getAttachment, async (c) => {
     const contentType =
       object.httpMetadata?.contentType || "application/octet-stream";
 
-    // Get original filename from custom metadata if available
-    const originalFilename =
-      object.customMetadata?.originalFilename || filename;
-
-    // Always regenerate Content-Disposition header to ensure proper encoding
-    // This handles Unicode characters according to RFC 5987
-    const contentDisposition = encodeContentDisposition(originalFilename);
-
     // Create response headers
     const headers = new Headers();
     headers.set("Content-Type", contentType);
-    headers.set("Content-Disposition", contentDisposition);
     headers.set("Content-Length", object.size.toString());
     headers.set("ETag", object.httpEtag);
 
