@@ -18,7 +18,8 @@
     "db:migrate": "wrangler d1 migrations apply journal-project",
     "db:migrate:remote": "wrangler d1 migrations apply journal-project --remote",
     "db:reset": "wrangler d1 migrations reset journal-project",
-    "api:generate": "rm -rf openapi.json && wget http://localhost:4000/api/docs -O openapi.json && rm -rf src/lib/api-client && openapi --input ./openapi.json --output ./src/lib/api-client --name ApiClient"
+    "api:generate": "rm -rf openapi.json && wget http://localhost:4000/api/docs -O openapi.json && rm -rf src/lib/api-client && openapi --input ./openapi.json --output ./src/lib/api-client --name ApiClient",
+    "secrets:bulk": "wrangler secret bulk .env"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.1.0",
