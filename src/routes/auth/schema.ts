@@ -28,6 +28,10 @@ export const signUpSchema = z.object({
     description: "User full name",
     example: "John Doe",
   }),
+  turnstileToken: z.string().min(1).openapi({
+    description: "Cloudflare Turnstile token",
+    example: "0.abcdefghijklmnopqrstuvwxyz",
+  }),
 });
 
 export const userSchema = z.object({

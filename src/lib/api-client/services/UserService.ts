@@ -23,7 +23,7 @@ export class UserService {
             id: number;
             email: string;
             username: string;
-            name: string | null;
+            displayName: string | null;
             avatar: string | null;
         };
     }> {

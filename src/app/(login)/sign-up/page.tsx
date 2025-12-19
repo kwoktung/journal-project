@@ -1,45 +1,136 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import Link from "next/link";
 import { apiClient } from "@/lib/client";
 import { ApiError } from "@/lib/api-client";
 
+declare global {
+  interface Window {
+    turnstile: {
+      render: (
+        element: string | HTMLElement,
+        options: {
+          sitekey: string;
+          callback?: (token: string) => void;
+          "error-callback"?: () => void;
+          "expired-callback"?: () => void;
+        },
+      ) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
+
+const signUpSchema = z
+  .object({
+    email: z.string().email("Please enter a valid email address"),
+    username: z
+      .string()
+      .min(3, "Username must be at least 3 characters")
+      .max(50, "Username must be less than 50 characters"),
+    name: z
+      .string()
+      .max(100, "Name must be less than 100 characters")
+      .optional(),
+    password: z.string().min(8, "Password must be at least 8 characters long"),
+    confirmPassword: z.string(),
+    turnstileToken: z
+      .string()
+      .min(1, "Please complete the security verification"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type SignUpFormValues = z.infer<typeof signUpSchema>;
+
 export default function SignUp() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<SignUpFormValues>({
+    resolver: zodResolver(signUpSchema),
+    mode: "onChange",
+    defaultValues: {
+      email: "",
+      username: "",
+      name: "",
+      password: "",
+      confirmPassword: "",
+      turnstileToken: "",
+    },
+  });
+
+  useEffect(() => {
+    // Load Turnstile script
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if (turnstileRef.current && window.turnstile) {
+        const widgetId = window.turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: (token: string) => {
+            form.setValue("turnstileToken", token, { shouldValidate: true });
+          },
+          "error-callback": () => {
+            form.setValue("turnstileToken", "", { shouldValidate: true });
+          },
+          "expired-callback": () => {
+            form.setValue("turnstileToken", "", { shouldValidate: true });
+          },
+        });
+        widgetIdRef.current = widgetId;
+      }
+    };
+
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.remove(widgetIdRef.current);
+      }
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [form]);
+
+  const onSubmit = async (data: SignUpFormValues) => {
     setError("");
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      return;
-    }
-
     setLoading(true);
 
     try {
       await apiClient.auth.postApiAuthSignUp({
-        email,
-        username,
-        password,
-        name: name || undefined,
+        email: data.email,
+        username: data.username,
+        password: data.password,
+        displayName: data.name || undefined,
+        turnstileToken: data.turnstileToken,
       });
       router.push("/home");
       router.refresh();
@@ -50,6 +141,11 @@ export default function SignUp() {
         setError("An error occurred. Please try again.");
       }
       setLoading(false);
+      // Reset Turnstile widget on error
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current);
+        form.setValue("turnstileToken", "", { shouldValidate: true });
+      }
     }
   };
 
@@ -63,130 +159,143 @@ export default function SignUp() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-foreground"
-              >
-                Email
-              </label>
-              <input
-                id="email"
+        <Form {...form}>
+          <form
+            className="mt-8 space-y-6"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground placeholder-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Enter your email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        autoComplete="email"
+                        placeholder="Enter your email"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-foreground"
-              >
-                Username
-              </label>
-              <input
-                id="username"
+              <FormField
+                control={form.control}
                 name="username"
-                type="text"
-                autoComplete="username"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground placeholder-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Choose a username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        autoComplete="username"
+                        placeholder="Choose a username"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-foreground"
-              >
-                Name (optional)
-              </label>
-              <input
-                id="name"
+              <FormField
+                control={form.control}
                 name="name"
-                type="text"
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-foreground placeholder-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Enter your name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        autoComplete="name"
+                        placeholder="Enter your name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground"
-              >
-                Password
-              </label>
-              <PasswordInput
-                id="password"
+              <FormField
+                control={form.control}
                 name="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1"
-                placeholder="Create a password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <PasswordInput
+                        autoComplete="new-password"
+                        placeholder="Create a password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-foreground"
-              >
-                Confirm Password
-              </label>
-              <PasswordInput
-                id="confirmPassword"
+              <FormField
+                control={form.control}
                 name="confirmPassword"
-                autoComplete="new-password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1"
-                placeholder="Confirm your password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <PasswordInput
+                        autoComplete="new-password"
+                        placeholder="Confirm your password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="turnstileToken"
+                render={() => (
+                  <FormItem>
+                    <FormControl>
+                      <div
+                        ref={turnstileRef}
+                        className="w-full flex justify-center"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            <div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || !form.formState.isValid}
+              >
+                {loading ? "Creating account..." : "Sign up"}
+              </Button>
             </div>
-          )}
-
-          <div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Sign up"}
-            </Button>
-          </div>
-
-          <div className="text-center text-sm">
-            <span className="text-foreground/60">
-              Already have an account?{" "}
-            </span>
-            <Link
-              href="/sign-in"
-              className="font-medium text-primary hover:underline"
-            >
-              Sign in
-            </Link>
-          </div>
-        </form>
+            <div className="text-center text-sm">
+              <span className="text-foreground/60">
+                Already have an account?{" "}
+              </span>
+              <Link
+                href="/sign-in"
+                className="font-medium text-primary hover:underline"
+              >
+                Sign in
+              </Link>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );

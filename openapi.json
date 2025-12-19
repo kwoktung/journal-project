@@ -54,10 +54,16 @@
                         "id": { "type": "number" },
                         "email": { "type": "string" },
                         "username": { "type": "string" },
-                        "name": { "type": ["string", "null"] },
+                        "displayName": { "type": ["string", "null"] },
                         "avatar": { "type": ["string", "null"] }
                       },
-                      "required": ["id", "email", "username", "name", "avatar"]
+                      "required": [
+                        "id",
+                        "email",
+                        "username",
+                        "displayName",
+                        "avatar"
+                      ]
                     }
                   },
                   "required": ["user"]
@@ -97,13 +103,19 @@
                     "description": "User password",
                     "example": "password123"
                   },
-                  "name": {
+                  "displayName": {
                     "type": "string",
                     "description": "User full name",
                     "example": "John Doe"
+                  },
+                  "turnstileToken": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Cloudflare Turnstile token",
+                    "example": "0.abcdefghijklmnopqrstuvwxyz"
                   }
                 },
-                "required": ["email", "username", "password"]
+                "required": ["email", "username", "password", "turnstileToken"]
               }
             }
           }
@@ -122,10 +134,16 @@
                         "id": { "type": "number" },
                         "email": { "type": "string" },
                         "username": { "type": "string" },
-                        "name": { "type": ["string", "null"] },
+                        "displayName": { "type": ["string", "null"] },
                         "avatar": { "type": ["string", "null"] }
                       },
-                      "required": ["id", "email", "username", "name", "avatar"]
+                      "required": [
+                        "id",
+                        "email",
+                        "username",
+                        "displayName",
+                        "avatar"
+                      ]
                     }
                   },
                   "required": ["user"]
@@ -176,10 +194,16 @@
                         "id": { "type": "number" },
                         "email": { "type": "string" },
                         "username": { "type": "string" },
-                        "name": { "type": ["string", "null"] },
+                        "displayName": { "type": ["string", "null"] },
                         "avatar": { "type": ["string", "null"] }
                       },
-                      "required": ["id", "email", "username", "name", "avatar"]
+                      "required": [
+                        "id",
+                        "email",
+                        "username",
+                        "displayName",
+                        "avatar"
+                      ]
                     }
                   },
                   "required": ["user"]
@@ -254,10 +278,10 @@
                       "properties": {
                         "id": { "type": "number" },
                         "username": { "type": "string" },
-                        "name": { "type": ["string", "null"] },
+                        "displayName": { "type": ["string", "null"] },
                         "avatar": { "type": ["string", "null"] }
                       },
-                      "required": ["id", "username", "name", "avatar"]
+                      "required": ["id", "username", "displayName", "avatar"]
                     },
                     "createdAt": { "type": "string" },
                     "updatedAt": { "type": ["string", "null"] },
@@ -319,10 +343,15 @@
                             "properties": {
                               "id": { "type": "number" },
                               "username": { "type": "string" },
-                              "name": { "type": ["string", "null"] },
+                              "displayName": { "type": ["string", "null"] },
                               "avatar": { "type": ["string", "null"] }
                             },
-                            "required": ["id", "username", "name", "avatar"]
+                            "required": [
+                              "id",
+                              "username",
+                              "displayName",
+                              "avatar"
+                            ]
                           },
                           "createdAt": { "type": "string" },
                           "updatedAt": { "type": ["string", "null"] },
@@ -542,10 +571,16 @@
                         "id": { "type": "number" },
                         "email": { "type": "string" },
                         "username": { "type": "string" },
-                        "name": { "type": ["string", "null"] },
+                        "displayName": { "type": ["string", "null"] },
                         "avatar": { "type": ["string", "null"] }
                       },
-                      "required": ["id", "email", "username", "name", "avatar"]
+                      "required": [
+                        "id",
+                        "email",
+                        "username",
+                        "displayName",
+                        "avatar"
+                      ]
                     }
                   },
                   "required": ["user"]

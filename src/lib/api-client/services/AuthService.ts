@@ -27,7 +27,7 @@ export class AuthService {
             id: number;
             email: string;
             username: string;
-            name: string | null;
+            displayName: string | null;
             avatar: string | null;
         };
     }> {
@@ -64,14 +64,18 @@ export class AuthService {
             /**
              * User full name
              */
-            name?: string;
+            displayName?: string;
+            /**
+             * Cloudflare Turnstile token
+             */
+            turnstileToken: string;
         },
     ): CancelablePromise<{
         user: {
             id: number;
             email: string;
             username: string;
-            name: string | null;
+            displayName: string | null;
             avatar: string | null;
         };
     }> {

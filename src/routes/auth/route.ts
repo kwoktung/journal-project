@@ -86,13 +86,46 @@ authApp.openapi(signIn, async (c) => {
 
 authApp.openapi(signUp, async (c) => {
   const body = c.req.valid("json");
-  const { email, username, password, displayName } = body;
+  const { email, username, password, displayName, turnstileToken } = body;
 
   if (!email || !username || !password) {
     return c.json({ error: "Email, username, and password are required" }, 400);
   }
 
+  if (!turnstileToken) {
+    return c.json({ error: "Turnstile verification is required" }, 400);
+  }
+
   const context = getCloudflareContext({ async: false });
+  // Verify Turnstile token
+  const turnstileResponse = await fetch(
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        secret: context.env.TURNSTILE_SECRET_KEY,
+        response: turnstileToken,
+      }),
+    },
+  );
+
+  const turnstileResult = await turnstileResponse.json<{
+    success: boolean;
+    "error-codes"?: string[];
+  }>();
+
+  if (!turnstileResult.success) {
+    return c.json(
+      {
+        error: "Turnstile verification failed. Please try again.",
+      },
+      400,
+    );
+  }
+
   const db = getDatabase(context.env);
 
   const existingUser = await db
