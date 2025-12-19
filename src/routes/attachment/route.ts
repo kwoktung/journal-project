@@ -6,6 +6,7 @@ import { getSessionFromCookie } from "@/lib/auth/session";
 import { getDatabase } from "@/database/client";
 import { attachmentTable } from "@/database/schema";
 import { getAttachment, createAttachment } from "./definition";
+import { createCache } from "@/lib/cache";
 
 // Helper function to generate timestamp-based filename
 // Uses crypto.randomUUID() for concurrent-safe uniqueness
@@ -114,41 +115,50 @@ attachmentApp.openapi(createAttachment, async (c) => {
 
 attachmentApp.openapi(getAttachment, async (c) => {
   try {
-    // Check authentication
     const context = getCloudflareContext({ async: false });
-
     const { filename } = c.req.valid("param");
 
-    // Get R2 bucket from context
-    const ctx = createContext(context.env);
-
-    // Fetch object from R2
-    const object = await ctx.env.R2.get(filename);
-
-    if (!object) {
-      return HttpResponse.notFound(c, "Attachment not found");
-    }
-
-    // Get content type from R2 metadata or default to octet-stream
-    const contentType =
-      object.httpMetadata?.contentType || "application/octet-stream";
-
-    // Create response headers
-    const headers = new Headers();
-    headers.set("Content-Type", contentType);
-    headers.set("Content-Length", object.size.toString());
-    headers.set("ETag", object.httpEtag);
-
-    // Set cache headers if available
-    if (object.httpMetadata?.cacheControl) {
-      headers.set("Cache-Control", object.httpMetadata.cacheControl);
-    }
-
-    // Stream the object body as response
-    return new Response(object.body, {
-      status: 200,
-      headers,
+    // Create cache instance with configuration
+    const cache = createCache(c, {
+      cacheName: "attachments",
+      cacheControl: "public, max-age=31536000, immutable",
+      enableLogging: true,
     });
+
+    // Create cache key based on the request URL
+    const cacheKey = new Request(c.req.url, c.req.raw);
+
+    // Use cache with custom fetcher function
+    const response = await cache.withCache(cacheKey, async () => {
+      // Get R2 bucket from context
+      const ctx = createContext(context.env);
+
+      // Fetch object from R2
+      const object = await ctx.env.R2.get(filename);
+
+      if (!object) {
+        return HttpResponse.notFound(c, "Attachment not found");
+      }
+
+      // Get content type from R2 metadata or default to octet-stream
+      const contentType =
+        object.httpMetadata?.contentType || "application/octet-stream";
+
+      // Create response headers
+      const headers = new Headers();
+      headers.set("Content-Type", contentType);
+      headers.set("Content-Length", object.size.toString());
+      headers.set("ETag", object.httpEtag);
+      headers.set("Cache-Control", "public, max-age=31536000, immutable");
+
+      // Stream the object body as response
+      return new Response(object.body, {
+        status: 200,
+        headers,
+      });
+    });
+
+    return response;
   } catch (error) {
     console.error("Attachment retrieval error:", error);
     return HttpResponse.error(c, {
