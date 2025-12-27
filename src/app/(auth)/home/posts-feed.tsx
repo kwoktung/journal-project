@@ -4,10 +4,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Trash2 } from "lucide-react";
-import { formatRelative } from "date-fns";
 import { Post } from "./types";
 import { AttachmentGallery } from "./gallery";
 import { ImageGrid } from "./image-grid";
+import { formatTimestamp, formatFullTimestamp } from "@/lib/format/timestamp";
 
 interface PostsFeedProps {
   posts: Post[];
@@ -15,12 +15,6 @@ interface PostsFeedProps {
   deletingPostId: number | null;
   onDeletePost: (postId: number) => void;
 }
-
-const formatTimestamp = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  return formatRelative(date, now);
-};
 
 export const PostsFeed = ({
   posts,
@@ -82,7 +76,10 @@ export const PostsFeed = ({
                           ? post.user.displayName || post.user.username
                           : `User ${post.createdBy}`}
                       </span>
-                      <span className="text-muted-foreground text-sm">
+                      <span
+                        className="text-muted-foreground text-sm"
+                        title={formatFullTimestamp(post.createdAt)}
+                      >
                         · {formatTimestamp(post.createdAt)}
                       </span>
                     </div>
