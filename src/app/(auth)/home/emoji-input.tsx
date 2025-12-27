@@ -73,10 +73,13 @@ export function EmojiInput({ onEmojiSelect, disabled }: EmojiInputProps) {
             <Drawer.Content className="bg-background flex flex-col rounded-t-[10px] h-[80vh] mt-24 fixed bottom-0 left-0 right-0 z-50">
               <div className="p-4 bg-background rounded-t-[10px] flex-1 overflow-auto">
                 <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted mb-4" />
-                <div className="flex items-center justify-between mb-4">
-                  <Drawer.Title className="text-lg font-semibold">
-                    Select Emoji
+                <div className="items-center justify-between mb-4 hidden">
+                  <Drawer.Title className="text-lg font-semibold ">
+                    Select an emoji
                   </Drawer.Title>
+                  <Drawer.Description>
+                    Select an emoji to add to your post
+                  </Drawer.Description>
                   <Button
                     variant="ghost"
                     size="sm"

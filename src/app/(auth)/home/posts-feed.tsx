@@ -6,8 +6,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Trash2 } from "lucide-react";
 import { formatRelative } from "date-fns";
 import { Post } from "./types";
-import { AttachmentItem } from "./attachment-item";
 import { AttachmentGallery } from "./gallery";
+import { ImageGrid } from "./image-grid";
 
 interface PostsFeedProps {
   posts: Post[];
@@ -105,16 +105,10 @@ export const PostsFeed = ({
                     {post.text}
                   </p>
                   {post.attachments && post.attachments.length > 0 && (
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      {post.attachments.map((attachment, idx) => (
-                        <AttachmentItem
-                          key={idx}
-                          uri={attachment.uri}
-                          index={idx}
-                          onClick={() => openGallery(post.attachments, idx)}
-                        />
-                      ))}
-                    </div>
+                    <ImageGrid
+                      attachments={post.attachments}
+                      onImageClick={(idx) => openGallery(post.attachments, idx)}
+                    />
                   )}
                 </div>
               </div>
