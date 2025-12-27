@@ -175,11 +175,12 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
     <div className="border rounded-lg p-4">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Textarea
+          name="text"
           ref={textareaRef}
           placeholder="What's happening?"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="min-h-24 resize-none border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent"
+          className="min-h-24 resize-none border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent!"
           maxLength={MAX_CHARACTERS + 100}
         />
 

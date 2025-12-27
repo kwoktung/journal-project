@@ -6,6 +6,7 @@ import { Smile } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Drawer } from "vaul";
 import dynamic from "next/dynamic";
+import { useIsMobile, useMounted } from "@/hooks";
 
 const Picker = dynamic(() => import("@emoji-mart/react"), { ssr: false });
 
@@ -16,24 +17,10 @@ interface EmojiInputProps {
 
 export function EmojiInput({ onEmojiSelect, disabled }: EmojiInputProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const mounted = useMounted();
+  const isMobile = useIsMobile();
   const { resolvedTheme } = useTheme();
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-
-    // Check if mobile on mount
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
