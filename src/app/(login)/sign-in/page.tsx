@@ -1,40 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import Link from "next/link";
-import { apiClient } from "@/lib/client";
-import { ApiError } from "@/lib/api-client";
+import { useSignIn } from "@/hooks/mutations/use-auth-mutations";
+import { handleApiError } from "@/lib/error-handler";
 
 export default function SignIn() {
-  const router = useRouter();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  const signInMutation = useSignIn();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
     try {
-      await apiClient.auth.postApiAuthSignIn({
+      await signInMutation.mutateAsync({
         login,
         password,
       });
-
-      router.push("/home");
-      router.refresh();
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.body?.error || "Sign in failed");
-      } else {
-        setError("An error occurred. Please try again.");
-      }
-      setLoading(false);
+      setError(handleApiError(err));
     }
   };
 
@@ -97,8 +87,12 @@ export default function SignIn() {
           )}
 
           <div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={signInMutation.isPending}
+            >
+              {signInMutation.isPending ? "Signing in..." : "Sign in"}
             </Button>
           </div>
 

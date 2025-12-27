@@ -6,25 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Upload, X } from "lucide-react";
-import { apiClient } from "@/lib/client";
-import { ApiError } from "@/lib/api-client";
+import {
+  useUpdateAvatar,
+  useRemoveAvatar,
+} from "@/hooks/mutations/use-user-mutations";
+import { handleApiError } from "@/lib/error-handler";
 import type { UserData } from "./types";
 
 interface ProfilePictureSectionProps {
   user: UserData | null;
-  onUserUpdate: (user: UserData) => void;
-  onRefresh: () => void;
 }
 
-export const ProfilePictureSection = ({
-  user,
-  onUserUpdate,
-  onRefresh,
-}: ProfilePictureSectionProps) => {
-  const [uploading, setUploading] = useState(false);
+export const ProfilePictureSection = ({ user }: ProfilePictureSectionProps) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const updateAvatarMutation = useUpdateAvatar();
+  const removeAvatarMutation = useRemoveAvatar();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,53 +59,14 @@ export const ProfilePictureSection = ({
   const handleUploadAvatar = async () => {
     if (!selectedFile) return;
 
-    setUploading(true);
     try {
-      // Upload the file first
-      const uploadResponse = await apiClient.attachment.postApiAttachment({
-        file: selectedFile,
-      });
-
-      if (!uploadResponse.data?.filename) {
-        throw new Error("Failed to upload image");
-      }
-
-      // Update user avatar with the filename
-      const avatarUrl = `/api/attachment/${uploadResponse.data.filename}`;
-      const response = await fetch("/api/user/avatar", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ avatar: avatarUrl }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update avatar");
-      }
-
-      const data = (await response.json()) as { user?: UserData };
-      if (data.user) {
-        onUserUpdate(data.user);
-      }
+      await updateAvatarMutation.mutateAsync({ file: selectedFile });
 
       // Clean up preview
       handleRemovePreview();
-
-      // Refresh user data
-      onRefresh();
     } catch (error) {
       console.error("Failed to upload avatar:", error);
-      if (error instanceof ApiError) {
-        alert(
-          error.body?.error || error.body?.message || "Failed to upload avatar",
-        );
-      } else {
-        alert("Failed to upload avatar. Please try again.");
-      }
-    } finally {
-      setUploading(false);
+      alert(handleApiError(error));
     }
   };
 
@@ -116,26 +76,10 @@ export const ProfilePictureSection = ({
     }
 
     try {
-      const response = await fetch("/api/user/avatar", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ avatar: null }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to remove avatar");
-      }
-
-      const data = (await response.json()) as { user?: UserData };
-      if (data.user) {
-        onUserUpdate(data.user);
-      }
+      await removeAvatarMutation.mutateAsync();
     } catch (error) {
       console.error("Failed to remove avatar:", error);
-      alert("Failed to remove avatar. Please try again.");
+      alert(handleApiError(error));
     }
   };
 
@@ -214,7 +158,7 @@ export const ProfilePictureSection = ({
                   variant="outline"
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
+                  disabled={updateAvatarMutation.isPending}
                 >
                   <Upload className="mr-2 size-4" />
                   {preview ? "Change Image" : "Upload Image"}
@@ -224,7 +168,7 @@ export const ProfilePictureSection = ({
                     variant="outline"
                     type="button"
                     onClick={handleRemoveAvatar}
-                    disabled={uploading}
+                    disabled={removeAvatarMutation.isPending}
                   >
                     <X className="mr-2 size-4" />
                     Remove Avatar
@@ -244,13 +188,18 @@ export const ProfilePictureSection = ({
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button onClick={handleUploadAvatar} disabled={uploading}>
-                    {uploading ? "Uploading..." : "Save Avatar"}
+                  <Button
+                    onClick={handleUploadAvatar}
+                    disabled={updateAvatarMutation.isPending}
+                  >
+                    {updateAvatarMutation.isPending
+                      ? "Uploading..."
+                      : "Save Avatar"}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={handleRemovePreview}
-                    disabled={uploading}
+                    disabled={updateAvatarMutation.isPending}
                   >
                     Cancel
                   </Button>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,8 +16,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import Link from "next/link";
-import { apiClient } from "@/lib/client";
-import { ApiError } from "@/lib/api-client";
+import { useSignUp } from "@/hooks/mutations/use-auth-mutations";
+import { handleApiError } from "@/lib/error-handler";
 
 declare global {
   interface Window {
@@ -65,11 +64,11 @@ const signUpSchema = z
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export default function SignUp() {
-  const router = useRouter();
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+
+  const signUpMutation = useSignUp();
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
@@ -122,25 +121,17 @@ export default function SignUp() {
 
   const onSubmit = async (data: SignUpFormValues) => {
     setError("");
-    setLoading(true);
 
     try {
-      await apiClient.auth.postApiAuthSignUp({
+      await signUpMutation.mutateAsync({
         email: data.email,
         username: data.username,
         password: data.password,
         displayName: data.name || undefined,
         turnstileToken: data.turnstileToken,
       });
-      router.push("/home");
-      router.refresh();
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.body?.error || "Sign up failed");
-      } else {
-        setError("An error occurred. Please try again.");
-      }
-      setLoading(false);
+      setError(handleApiError(err));
       // Reset Turnstile widget on error
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.reset(widgetIdRef.current);
@@ -278,9 +269,9 @@ export default function SignUp() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading || !form.formState.isValid}
+                disabled={signUpMutation.isPending || !form.formState.isValid}
               >
-                {loading ? "Creating account..." : "Sign up"}
+                {signUpMutation.isPending ? "Creating account..." : "Sign up"}
               </Button>
             </div>
             <div className="text-center text-sm">

@@ -1,12 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Paperclip, Trash2 } from "lucide-react";
-import { formatRelative } from "date-fns";
+import { useState } from "react";
 import { Post } from "./types";
+import { AttachmentGallery } from "./gallery";
+import { PostItem } from "./post-item";
+import { PostSkeleton } from "./post-skeleton";
 
 interface PostsFeedProps {
   posts: Post[];
@@ -15,136 +13,59 @@ interface PostsFeedProps {
   onDeletePost: (postId: number) => void;
 }
 
-const formatTimestamp = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  return formatRelative(date, now);
-};
-
 export const PostsFeed = ({
   posts,
   loading,
   deletingPostId,
   onDeletePost,
 }: PostsFeedProps) => {
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Your Posts</h2>
+  const [galleryState, setGalleryState] = useState<{
+    open: boolean;
+    attachments: Array<{ uri: string }>;
+    initialIndex: number;
+  } | null>(null);
 
+  const openGallery = (attachments: Array<{ uri: string }>, index: number) => {
+    setGalleryState({ open: true, attachments, initialIndex: index });
+  };
+
+  const closeGallery = () => {
+    setGalleryState(null);
+  };
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-4 hidden">Posts</h2>
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-muted-foreground">Loading posts...</div>
+        <div className="space-y-4">
+          <PostSkeleton />
+          <PostSkeleton />
+          <PostSkeleton />
         </div>
       ) : posts.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No posts yet. Create your first post above!
-          </CardContent>
-        </Card>
+        <div className="py-12 text-center text-muted-foreground">
+          No posts yet. Create your first post above!
+        </div>
       ) : (
-        posts.map((post) => (
-          <Card
-            key={post.id}
-            className="hover:bg-accent/50 transition-colors relative group"
-          >
-            <CardContent className="pt-6">
-              <div className="flex gap-4">
-                <Avatar>
-                  {post.user?.avatar && (
-                    <AvatarImage
-                      src={post.user.avatar}
-                      alt={post.user.displayName || post.user.username}
-                    />
-                  )}
-                  <AvatarFallback>
-                    {post.user
-                      ? (post.user.displayName || post.user.username)
-                          .slice(0, 2)
-                          .toUpperCase()
-                      : post.createdBy.toString().slice(-2)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">
-                        {post.user
-                          ? post.user.displayName || post.user.username
-                          : `User ${post.createdBy}`}
-                      </span>
-                      <span className="text-muted-foreground text-sm">
-                        · {formatTimestamp(post.createdAt)}
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDeletePost(post.id)}
-                      disabled={deletingPostId === post.id}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      {deletingPostId === post.id ? (
-                        <div className="h-4 w-4 border-2 border-destructive border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-base whitespace-pre-wrap break-words">
-                    {post.text}
-                  </p>
-                  {post.attachments && post.attachments.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        {post.attachments.map((attachment, idx) => {
-                          const filename = attachment.uri.split("/").pop();
-                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(
-                            filename || "",
-                          );
-
-                          return (
-                            <div key={idx} className="relative group">
-                              {isImage ? (
-                                <a
-                                  href={attachment.uri}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block rounded-lg overflow-hidden border hover:opacity-90 transition-opacity relative aspect-video"
-                                >
-                                  <Image
-                                    src={attachment.uri}
-                                    alt={`Attachment ${idx + 1}`}
-                                    fill
-                                    className="object-cover"
-                                    sizes="(max-width: 768px) 50vw, 25vw"
-                                    unoptimized
-                                  />
-                                </a>
-                              ) : (
-                                <a
-                                  href={attachment.uri}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors"
-                                >
-                                  <Paperclip className="size-4 text-muted-foreground" />
-                                  <span className="text-sm truncate flex-1">
-                                    {filename}
-                                  </span>
-                                </a>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <PostItem
+              key={post.id}
+              post={post}
+              isDeleting={deletingPostId === post.id}
+              onDelete={onDeletePost}
+              onImageClick={openGallery}
+            />
+          ))}
+        </div>
+      )}
+      {galleryState && (
+        <AttachmentGallery
+          attachments={galleryState.attachments}
+          initialIndex={galleryState.initialIndex}
+          open={galleryState.open}
+          onOpenChange={(open) => !open && closeGallery()}
+        />
       )}
     </div>
   );
