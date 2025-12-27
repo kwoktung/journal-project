@@ -4,11 +4,12 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as ImageIcon } from "lucide-react";
-import { apiClient } from "@/lib/client";
-import { ApiError } from "@/lib/api-client";
 import { EmojiInput } from "@/app/(auth)/home/emoji-input";
 import { ImagePreviewGallery } from "@/app/(auth)/home/image-preview-gallery";
 import { ImageEditorModal } from "@/app/(auth)/home/image-editor-modal";
+import { useCreatePost } from "@/hooks/mutations/use-post-mutations";
+import { useUploadAttachment } from "@/hooks/mutations/use-attachment-mutations";
+import { handleApiError } from "@/lib/error-handler";
 
 const MAX_CHARACTERS = 280;
 const MAX_ATTACHMENTS = 4;
@@ -24,18 +25,16 @@ interface AttachmentPreview {
   hasEdits?: boolean;
 }
 
-interface PostCreationFormProps {
-  onPostCreated: () => void;
-}
-
-export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
+export const PostCreationForm = () => {
   const [text, setText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const createPostMutation = useCreatePost();
+  const uploadAttachmentMutation = useUploadAttachment();
 
   const isImageFile = (file: File): boolean => {
     return file.type.startsWith("image/");
@@ -119,19 +118,9 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
   const uploadAttachment = async (
     attachment: AttachmentPreview,
   ): Promise<number> => {
-    try {
-      // Use edited file if exists, otherwise use original file
-      const fileToUpload = attachment.editedFile || attachment.file;
-      const data = await apiClient.attachment.postApiAttachment({
-        file: fileToUpload as File,
-      });
-      return data.data.id;
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw new Error(err.body?.error || "Failed to upload attachment");
-      }
-      throw err;
-    }
+    // Use edited file if exists, otherwise use original file
+    const fileToUpload = attachment.editedFile || attachment.file;
+    return await uploadAttachmentMutation.mutateAsync(fileToUpload as File);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,7 +129,6 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
       return;
     }
 
-    setSubmitting(true);
     setError("");
 
     try {
@@ -174,15 +162,16 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
       }
 
       // Create post with attachment IDs
-      await apiClient.post.postApiPosts({
+      await createPostMutation.mutateAsync({
         text: text.trim(),
         attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
       });
 
       // Clear the form
       setText("");
+      const oldAttachments = [...attachments];
       setAttachments([]);
-      attachments.forEach((att) => {
+      oldAttachments.forEach((att) => {
         if (att.preview) {
           URL.revokeObjectURL(att.preview);
         }
@@ -190,20 +179,17 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
           URL.revokeObjectURL(att.editedPreview);
         }
       });
-
-      // Notify parent to refresh posts
-      onPostCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create post");
+      setError(handleApiError(err));
       console.error("Create post error:", err);
-    } finally {
-      setSubmitting(false);
     }
   };
 
   const characterCount = text.length;
   const isOverLimit = characterCount > MAX_CHARACTERS;
-  const canSubmit = text.trim().length > 0 && !isOverLimit && !submitting;
+  const isSubmitting =
+    createPostMutation.isPending || uploadAttachmentMutation.isPending;
+  const canSubmit = text.trim().length > 0 && !isOverLimit && !isSubmitting;
 
   return (
     <div className="border rounded-lg p-4">
@@ -224,7 +210,7 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
             attachments={attachments}
             onEdit={setEditingIndex}
             onRemove={removeAttachment}
-            disabled={submitting}
+            disabled={isSubmitting}
           />
         )}
 
@@ -235,7 +221,7 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
               type="file"
               multiple
               onChange={handleFileSelect}
-              disabled={submitting || attachments.length >= MAX_ATTACHMENTS}
+              disabled={isSubmitting || attachments.length >= MAX_ATTACHMENTS}
               className="hidden"
               id="file-input"
               accept="image/*,video/*,.pdf,.doc,.docx,.txt"
@@ -245,7 +231,7 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
                 type="button"
                 variant="ghost"
                 size="icon"
-                disabled={submitting || attachments.length >= MAX_ATTACHMENTS}
+                disabled={isSubmitting || attachments.length >= MAX_ATTACHMENTS}
                 className="cursor-pointer"
                 asChild
               >
@@ -255,7 +241,10 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
               </Button>
             </label>
           </div>
-          <EmojiInput onEmojiSelect={handleEmojiSelect} disabled={submitting} />
+          <EmojiInput
+            onEmojiSelect={handleEmojiSelect}
+            disabled={isSubmitting}
+          />
           <div
             className={`text-sm ml-auto ${
               isOverLimit
@@ -268,7 +257,7 @@ export const PostCreationForm = ({ onPostCreated }: PostCreationFormProps) => {
             {characterCount}/{MAX_CHARACTERS}
           </div>
           <Button type="submit" disabled={!canSubmit} className="min-w-20">
-            {submitting ? "Posting..." : "Post"}
+            {isSubmitting ? "Posting..." : "Post"}
           </Button>
         </div>
         {error && <div className="text-sm text-destructive">{error}</div>}

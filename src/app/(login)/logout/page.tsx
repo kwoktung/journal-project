@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut, Loader2 } from "lucide-react";
-import { apiClient } from "@/lib/client";
+import { useSignOut } from "@/hooks/mutations/use-auth-mutations";
 
 const Logout = () => {
-  const router = useRouter();
   const [stage, setStage] = useState<
     "signing-out" | "redirecting" | "complete"
   >("signing-out");
+
+  const signOutMutation = useSignOut();
 
   useEffect(() => {
     processLogout();
@@ -21,7 +21,7 @@ const Logout = () => {
       // Stage 1: Sign out
       setStage("signing-out");
       await Promise.all([
-        apiClient.auth.postApiAuthSignOut(),
+        signOutMutation.mutateAsync(),
         new Promise((resolve) => setTimeout(resolve, 1200)),
       ]);
 
@@ -32,14 +32,8 @@ const Logout = () => {
       // Stage 3: Complete
       setStage("complete");
       await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Redirect
-      router.push("/sign-in");
-      router.refresh();
     } catch (error) {
       console.error("Sign out error:", error);
-      router.push("/sign-in");
-      router.refresh();
     }
   };
 

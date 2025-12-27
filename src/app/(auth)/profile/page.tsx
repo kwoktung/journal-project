@@ -1,36 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { apiClient } from "@/lib/client";
 import { ProfilePictureSection } from "./profile-picture-section";
 import { AccountActionsSection } from "./account-actions-section";
 import { DangerZoneSection } from "./danger-zone-section";
-import type { UserData } from "./types";
+import { useSession } from "@/hooks/queries/use-auth";
 
 const ProfilePage = () => {
-  const [user, setUser] = useState<UserData | null>(null);
+  const { data: user, isLoading, error, refetch } = useSession();
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-2xl px-4 py-8">
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
-  const fetchUserData = async () => {
-    try {
-      const response = await apiClient.auth.getApiAuthSession();
-      if (response.user) {
-        setUser(response.user);
-      }
-    } catch (error) {
-      console.error("Failed to fetch user data:", error);
-    }
-  };
-
-  const handleUserUpdate = (updatedUser: UserData) => {
-    setUser(updatedUser);
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-2xl px-4 py-8">
+          <div className="text-center text-red-500">
+            Failed to load profile data
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,11 +46,7 @@ const ProfilePage = () => {
           <h1 className="text-2xl font-bold">Profile Settings</h1>
         </div>
 
-        <ProfilePictureSection
-          user={user}
-          onUserUpdate={handleUserUpdate}
-          onRefresh={fetchUserData}
-        />
+        <ProfilePictureSection user={user ?? null} />
 
         <AccountActionsSection />
 
