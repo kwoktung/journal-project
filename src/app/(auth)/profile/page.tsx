@@ -46,14 +46,15 @@ const ProfilePage = () => {
           </Link>
           <h1 className="text-2xl font-bold">Profile Settings</h1>
         </div>
+        <div className="space-y-6">
+          <ProfilePictureSection user={user ?? null} />
 
-        <ProfilePictureSection user={user ?? null} />
+          <ThemeSection />
 
-        <ThemeSection />
+          <AccountActionsSection />
 
-        <AccountActionsSection />
-
-        <DangerZoneSection />
+          <DangerZoneSection />
+        </div>
       </div>
     </div>
   );

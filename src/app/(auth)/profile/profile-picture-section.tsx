@@ -110,7 +110,7 @@ export const ProfilePictureSection = ({ user }: ProfilePictureSectionProps) => {
   };
 
   return (
-    <Card className="mb-6">
+    <Card>
       <CardHeader>
         <CardTitle>Profile Picture</CardTitle>
       </CardHeader>

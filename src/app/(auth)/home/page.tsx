@@ -40,7 +40,7 @@ const Dashboard = () => {
           <h1 className="text-xl font-semibold">Moment</h1>
           <Link href="/profile">
             <Button variant="ghost" size="icon" title="Profile">
-              <User className="size-4" />
+              <User className="size-6" />
             </Button>
           </Link>
         </div>
