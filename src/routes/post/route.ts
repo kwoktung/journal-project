@@ -35,6 +35,20 @@ postApp.openapi(createPost, async (c) => {
     const db = getDatabase(context.env);
     const now = new Date();
 
+    // Check if user has an active relationship
+    const [user] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, session.userId))
+      .limit(1);
+
+    if (!user || !user.currentRelationshipId) {
+      return c.json(
+        { error: "You must pair with a partner before creating posts" },
+        403,
+      );
+    }
+
     // Validate attachments exist and are not deleted
     if (attachments.length > 0) {
       const validAttachments = await db
@@ -66,6 +80,7 @@ postApp.openapi(createPost, async (c) => {
       .values({
         text,
         createdBy: session.userId,
+        relationshipId: user.currentRelationshipId,
         createdAt: now,
         updatedAt: now,
       })
@@ -161,7 +176,19 @@ postApp.openapi(queryPosts, async (c) => {
 
     const db = getDatabase(context.env);
 
-    // Fetch user posts with user information using join
+    // Get user's current relationship ID
+    const [user] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, session.userId))
+      .limit(1);
+
+    if (!user || !user.currentRelationshipId) {
+      // No relationship - return empty posts
+      return c.json({ posts: [] }, 200);
+    }
+
+    // Fetch relationship posts with user information using join
     const postsWithUsers = await db
       .select({
         post: postTable,
@@ -176,7 +203,7 @@ postApp.openapi(queryPosts, async (c) => {
       .leftJoin(userTable, eq(postTable.createdBy, userTable.id))
       .where(
         and(
-          eq(postTable.createdBy, session.userId),
+          eq(postTable.relationshipId, user.currentRelationshipId),
           isNull(postTable.deletedAt),
         ),
       )
@@ -264,14 +291,21 @@ postApp.openapi(deletePost, async (c) => {
     const db = getDatabase(context.env);
     const now = new Date();
 
-    // Check if post exists and belongs to user
+    // Get user's current relationship ID
+    const [user] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, session.userId))
+      .limit(1);
+
+    // Check if post exists and belongs to user AND user's relationship
     const [post] = await db
       .select()
       .from(postTable)
       .where(
         and(
           eq(postTable.id, postId),
-          eq(postTable.createdBy, session.userId),
+          eq(postTable.createdBy, session.userId), // Only creator can delete
           isNull(postTable.deletedAt),
         ),
       )
@@ -281,6 +315,21 @@ postApp.openapi(deletePost, async (c) => {
       return c.json(
         { error: "Post not found or you don't have permission to delete it" },
         404,
+      );
+    }
+
+    // Verify post belongs to user's relationship
+    if (
+      user &&
+      user.currentRelationshipId &&
+      post.relationshipId !== user.currentRelationshipId
+    ) {
+      return c.json(
+        {
+          error:
+            "Post does not belong to your current relationship relationship",
+        },
+        403,
       );
     }
 

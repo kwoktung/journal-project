@@ -70,6 +70,10 @@ export class AuthService {
              * Cloudflare Turnstile token
              */
             turnstileToken: string;
+            /**
+             * Optional invite code to auto-pair with partner
+             */
+            inviteCode?: string;
         },
     ): CancelablePromise<{
         /**
@@ -115,6 +119,7 @@ export class AuthService {
             method: 'DELETE',
             url: '/api/auth/account',
             errors: {
+                400: `Bad request - Cannot delete account while in an active relationship`,
                 401: `Unauthorized - Not logged in`,
             },
         });

@@ -71,7 +71,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   // 1 Image: Full width, max aspect 16:9
   if (count === 1) {
     return (
-      <div className="mt-3 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[600px]">
+      <div className="mt-3 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[600px]">
         <div className="relative w-full aspect-video">
           <div className="relative w-full h-full">
             <GridImage
@@ -89,7 +89,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   // 2 Images: Side by side, 7:8 aspect ratio each
   if (count === 2) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-0 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px]">
+      <div className="mt-3 grid grid-cols-2 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         <GridImage
           uri={attachments[0].uri}
           onClick={() => handleClick(0)}
@@ -109,7 +109,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   // 3 Images: 1 large left (7:8) + 2 stacked right (each takes half height)
   if (count === 3) {
     return (
-      <div className="mt-3 flex gap-0 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px] aspect-[16/10]">
+      <div className="mt-3 flex gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px] aspect-[16/10]">
         <div className="flex-[2] min-w-0">
           <GridImage
             uri={attachments[0].uri}
@@ -137,7 +137,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   // 4 Images: 2x2 grid, square
   if (count === 4) {
     return (
-      <div className="mt-3 grid grid-cols-2 gap-0 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px]">
+      <div className="mt-3 grid grid-cols-2 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         {attachments.map((attachment, idx) => (
           <GridImage
             key={idx}
@@ -154,7 +154,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   // 5 Images: 2 top row + 3 bottom row
   if (count === 5) {
     return (
-      <div className="mt-3 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px]">
+      <div className="mt-3 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         <div className="grid grid-cols-2 gap-0">
           {attachments.slice(0, 2).map((attachment, idx) => (
             <GridImage

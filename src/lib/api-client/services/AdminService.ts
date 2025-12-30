@@ -10,7 +10,7 @@ export class AdminService {
      * @returns any Cleanup completed successfully
      * @throws ApiError
      */
-    public postApiAdminCleanupAttachments(): CancelablePromise<{
+    public postApiAdminCleanupOrphanedAttachments(): CancelablePromise<{
         success: boolean;
         data: {
             deletedCount: number;
@@ -20,10 +20,35 @@ export class AdminService {
     }> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/api/admin/cleanup-attachments',
+            url: '/api/admin/cleanup-orphaned-attachments',
             errors: {
                 401: `Unauthorized - Invalid or missing bearer token`,
                 500: `Internal server error - Failed to cleanup attachments`,
+            },
+        });
+    }
+    /**
+     * @returns any Cleanup completed successfully
+     * @throws ApiError
+     */
+    public postApiAdminCleanupDeletedCouples(): CancelablePromise<{
+        success: boolean;
+        data: {
+            message: string;
+            deletedCount: number;
+            stats: {
+                couples: number;
+                posts: number;
+                attachments: number;
+            };
+        };
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/admin/cleanup-deleted-couples',
+            errors: {
+                401: `Unauthorized - Invalid or missing bearer token`,
+                500: `Internal server error - Failed to cleanup deleted couples`,
             },
         });
     }

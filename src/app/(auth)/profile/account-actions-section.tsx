@@ -41,8 +41,8 @@ export const AccountActionsSection = () => {
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline">
-              <LogOut className="mr-2 size-4" />
-              Leave
+              <LogOut className="size-4" />
+              Sign out
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
@@ -56,7 +56,7 @@ export const AccountActionsSection = () => {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleLogout}>
-                Logout
+                Sign out
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

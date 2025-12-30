@@ -10,6 +10,7 @@ interface PostsFeedProps {
   posts: Post[];
   loading: boolean;
   deletingPostId: number | null;
+  currentUserId?: number;
   onDeletePost: (postId: number) => void;
 }
 
@@ -17,6 +18,7 @@ export const PostsFeed = ({
   posts,
   loading,
   deletingPostId,
+  currentUserId,
   onDeletePost,
 }: PostsFeedProps) => {
   const [galleryState, setGalleryState] = useState<{
@@ -53,6 +55,7 @@ export const PostsFeed = ({
               key={post.id}
               post={post}
               isDeleting={deletingPostId === post.id}
+              currentUserId={currentUserId}
               onDelete={onDeletePost}
               onImageClick={openGallery}
             />

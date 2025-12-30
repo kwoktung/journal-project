@@ -25,8 +25,9 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
         {showToggle && (
           <button
             type="button"
+            tabIndex={-1}
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-3 top-1/2 select-none -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? (

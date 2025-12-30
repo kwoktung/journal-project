@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getSession } from "@/lib/next/session";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,8 +14,7 @@ import {
 } from "lucide-react";
 
 export default async function Home() {
-  const context = await getCloudflareContext({ async: true });
-  const session = await getSession(context.env.JWT_SECRET);
+  const session = await getSession();
 
   if (session) {
     redirect("/home");

@@ -7,6 +7,9 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Form,
   FormControl,
@@ -16,8 +19,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSignUp } from "@/hooks/mutations/use-auth-mutations";
+import { useValidateInvite } from "@/hooks/queries/use-relationship";
 import { handleApiError } from "@/lib/error-handler";
+import { Heart } from "lucide-react";
 
 declare global {
   interface Window {
@@ -46,10 +52,6 @@ const signUpSchema = z
       .string()
       .min(3, "Username must be at least 3 characters")
       .max(50, "Username must be less than 50 characters"),
-    name: z
-      .string()
-      .max(100, "Name must be less than 100 characters")
-      .optional(),
     password: z.string().min(8, "Password must be at least 8 characters long"),
     confirmPassword: z.string(),
     turnstileToken: z
@@ -68,20 +70,45 @@ export default function SignUp() {
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
+  const searchParams = useSearchParams();
+  const inviteCode = searchParams.get("code");
   const signUpMutation = useSignUp();
+
+  // Validate invite code using TanStack Query
+  const {
+    data: inviteValidation,
+    isLoading: isValidatingInvite,
+    error: inviteError,
+  } = useValidateInvite(inviteCode);
+
+  const inviter = inviteValidation?.inviter;
+  const inviteValid = inviteValidation?.valid;
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
-    mode: "onChange",
+    mode: "onSubmit",
     defaultValues: {
       email: "",
       username: "",
-      name: "",
       password: "",
       confirmPassword: "",
       turnstileToken: "",
     },
   });
+
+  // Set error if invite validation fails
+  useEffect(() => {
+    if (inviteCode && !isValidatingInvite && inviteError) {
+      setError("Failed to validate invitation code");
+    } else if (
+      inviteCode &&
+      !isValidatingInvite &&
+      inviteValidation &&
+      !inviteValidation.valid
+    ) {
+      setError("Invalid or expired invitation code");
+    }
+  }, [inviteCode, inviteValidation, isValidatingInvite, inviteError]);
 
   useEffect(() => {
     // Don't initialize if widget already exists
@@ -160,8 +187,8 @@ export default function SignUp() {
         email: data.email,
         username: data.username,
         password: data.password,
-        displayName: data.name || undefined,
         turnstileToken: data.turnstileToken,
+        inviteCode: inviteCode || undefined,
       });
     } catch (err) {
       setError(handleApiError(err));
@@ -174,152 +201,177 @@ export default function SignUp() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8 px-4 py-8">
-        <div>
-          <h2 className="text-center text-3xl font-bold">Create an account</h2>
-          <p className="mt-2 text-center text-sm text-foreground/60">
-            Sign up to get started
-          </p>
-        </div>
-
-        <Form {...form}>
-          <form
-            className="mt-8 space-y-6"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        autoComplete="email"
-                        placeholder="Enter your email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        autoComplete="username"
-                        placeholder="Choose a username"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name (optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        autoComplete="name"
-                        placeholder="Enter your name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <PasswordInput
-                        autoComplete="new-password"
-                        placeholder="Create a password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <PasswordInput
-                        autoComplete="new-password"
-                        placeholder="Confirm your password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="turnstileToken"
-                render={() => (
-                  <FormItem>
-                    <FormControl>
-                      <div
-                        ref={turnstileRef}
-                        className="w-full flex justify-center"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
+    <div className="flex min-h-screen items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-md">
+        <Card className="w-full p-8 shadow-warm-hover">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-foreground">
+              Create an account
+            </h2>
+            {inviter && inviteValid ? (
+              <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-secondary p-4">
+                <Heart className="h-5 w-5 text-primary" fill="currentColor" />
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={inviter.avatar || undefined} />
+                  <AvatarFallback>
+                    {inviter.displayName?.[0] || inviter.username[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-semibold">
+                    {inviter.displayName || inviter.username}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    is inviting you to join
+                  </p>
+                </div>
               </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Sign up to get started
+              </p>
             )}
-            <div>
+          </div>
+
+          <Form {...form}>
+            <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">
+                        Email
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          autoComplete="email"
+                          placeholder="Enter your email"
+                          className="h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">
+                        Username
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          autoComplete="username"
+                          placeholder="Choose a username"
+                          className="h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">
+                        Password
+                      </FormLabel>
+                      <FormControl>
+                        <PasswordInput
+                          autoComplete="new-password"
+                          placeholder="Create a password"
+                          className="h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">
+                        Confirm Password
+                      </FormLabel>
+                      <FormControl>
+                        <PasswordInput
+                          autoComplete="new-password"
+                          placeholder="Confirm your password"
+                          className="h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="turnstileToken"
+                  render={() => (
+                    <FormItem>
+                      <FormControl>
+                        <div
+                          ref={turnstileRef}
+                          className="w-full flex justify-center"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {error && (
+                <div className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive border border-destructive/20">
+                  {error}
+                </div>
+              )}
               <Button
                 type="submit"
-                className="w-full"
-                disabled={signUpMutation.isPending || !form.formState.isValid}
+                size="lg"
+                className="w-full h-12"
+                disabled={signUpMutation.isPending}
               >
                 {signUpMutation.isPending ? "Creating account..." : "Sign up"}
               </Button>
+            </form>
+          </Form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-card px-3 text-muted-foreground">
+                  Already have an account?
+                </span>
+              </div>
             </div>
-            <div className="text-center text-sm">
-              <span className="text-foreground/60">
-                Already have an account?{" "}
-              </span>
+
+            <div className="mt-6 text-center">
               <Link
                 href="/sign-in"
-                className="font-medium text-primary hover:underline"
+                className="inline-flex items-center justify-center text-sm font-semibold text-primary hover:underline"
               >
-                Sign in
+                Sign in instead
               </Link>
             </div>
-          </form>
-        </Form>
+          </div>
+        </Card>
       </div>
     </div>
   );

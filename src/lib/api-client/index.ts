@@ -14,4 +14,5 @@ export { AdminService } from './services/AdminService';
 export { AttachmentService } from './services/AttachmentService';
 export { AuthService } from './services/AuthService';
 export { PostService } from './services/PostService';
+export { RelationshipService } from './services/RelationshipService';
 export { UserService } from './services/UserService';

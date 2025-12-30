@@ -9,6 +9,7 @@ import { AdminService } from './services/AdminService';
 import { AttachmentService } from './services/AttachmentService';
 import { AuthService } from './services/AuthService';
 import { PostService } from './services/PostService';
+import { RelationshipService } from './services/RelationshipService';
 import { UserService } from './services/UserService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class ApiClient {
@@ -16,6 +17,7 @@ export class ApiClient {
     public readonly attachment: AttachmentService;
     public readonly auth: AuthService;
     public readonly post: PostService;
+    public readonly relationship: RelationshipService;
     public readonly user: UserService;
     public readonly request: BaseHttpRequest;
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
@@ -34,6 +36,7 @@ export class ApiClient {
         this.attachment = new AttachmentService(this.request);
         this.auth = new AuthService(this.request);
         this.post = new PostService(this.request);
+        this.relationship = new RelationshipService(this.request);
         this.user = new UserService(this.request);
     }
 }

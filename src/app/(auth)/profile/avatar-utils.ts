@@ -59,11 +59,11 @@ export function getUserInitials(user: UserData | null): string {
       .map((n) => n[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2);
+      .slice(0, 1);
   }
 
   if (user?.username) {
-    return user.username.slice(0, 2).toUpperCase();
+    return user.username.slice(0, 1).toUpperCase();
   }
 
   return "U";

@@ -94,9 +94,6 @@ export function ImageEditorModal({
       );
       onSave(editedFile);
       onOpenChange(false);
-    } catch (error) {
-      console.error("Error processing image:", error);
-      alert("Failed to process image. Please try again.");
     } finally {
       setProcessing(false);
     }
@@ -186,28 +183,32 @@ export function ImageEditorModal({
   // Mobile: Full-screen drawer
   if (isMobile) {
     return (
-      <Drawer.Root open={open} onOpenChange={onOpenChange}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-background/80 z-50" />
-          <Drawer.Content className="bg-background flex flex-col fixed inset-0 z-50">
-            <div className="flex items-center justify-between p-4 border-b">
-              <Drawer.Title className="text-lg font-semibold">
-                Edit Image
-              </Drawer.Title>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleCancel}
-                disabled={processing}
-              >
-                <X className="size-5" />
-              </Button>
-            </div>
-            <div className="flex-1 flex flex-col min-h-0">{editorContent}</div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+      <>
+        <Drawer.Root open={open} onOpenChange={onOpenChange}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-background/80 z-50" />
+            <Drawer.Content className="bg-background flex flex-col fixed inset-0 z-50">
+              <div className="flex items-center justify-between p-4 border-b">
+                <Drawer.Title className="text-lg font-semibold">
+                  Edit Image
+                </Drawer.Title>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCancel}
+                  disabled={processing}
+                >
+                  <X className="size-5" />
+                </Button>
+              </div>
+              <div className="flex-1 flex flex-col min-h-0">
+                {editorContent}
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      </>
     );
   }
 

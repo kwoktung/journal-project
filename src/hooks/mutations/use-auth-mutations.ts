@@ -38,6 +38,7 @@ export function useSignUp() {
       password: string;
       displayName?: string;
       turnstileToken: string;
+      inviteCode?: string;
     }) => {
       return await apiClient.auth.postApiAuthSignUp(data);
     },

@@ -6,6 +6,8 @@ import {
   postTable,
   attachmentTable,
   refreshTokenTable,
+  relationshipTable,
+  invitationTable,
 } from "@/database/schema";
 import { getDatabase } from "@/database/client";
 import { HttpResponse } from "@/lib/response";
@@ -111,7 +113,8 @@ authApp.openapi(signIn, async (c) => {
 
 authApp.openapi(signUp, async (c) => {
   const body = c.req.valid("json");
-  const { email, username, password, displayName, turnstileToken } = body;
+  const { email, username, password, displayName, turnstileToken, inviteCode } =
+    body;
 
   if (!email || !username || !password) {
     return c.json({ error: "Email, username, and password are required" }, 400);
@@ -122,6 +125,8 @@ authApp.openapi(signUp, async (c) => {
   }
 
   const context = getCloudflareContext({ async: false });
+  const now = new Date();
+
   // Verify Turnstile token
   const turnstileResponse = await fetch(
     "https://challenges.cloudflare.com/turnstile/v0/siteverify",
@@ -173,6 +178,121 @@ authApp.openapi(signUp, async (c) => {
 
   const hashedPassword = await hashPassword(password);
 
+  // Process invite code if provided
+  let relationshipId: number | null = null;
+
+  if (inviteCode) {
+    // Validate invitation
+    const [invitation] = await db
+      .select()
+      .from(invitationTable)
+      .where(eq(invitationTable.inviteCode, inviteCode))
+      .limit(1);
+
+    if (!invitation || invitation.status !== "pending") {
+      return c.json({ error: "Invalid or expired invitation code" }, 400);
+    }
+
+    if (invitation.expiresAt && invitation.expiresAt < now) {
+      await db
+        .update(invitationTable)
+        .set({ status: "expired" })
+        .where(eq(invitationTable.id, invitation.id));
+      return c.json({ error: "Invitation code has expired" }, 400);
+    }
+
+    // Get inviter
+    const [inviter] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, invitation.createdBy))
+      .limit(1);
+
+    if (!inviter) {
+      return c.json({ error: "Inviter not found" }, 400);
+    }
+
+    if (inviter.currentRelationshipId) {
+      return c.json(
+        { error: "Inviter is already in a relationship relationship" },
+        400,
+      );
+    }
+
+    // Create user
+    const [newUser] = await db
+      .insert(userTable)
+      .values({
+        email,
+        username,
+        password: hashedPassword,
+        displayName: displayName || null,
+      })
+      .returning();
+
+    // Create relationship
+    const [relationship] = await db
+      .insert(relationshipTable)
+      .values({
+        user1Id: invitation.createdBy,
+        user2Id: newUser.id,
+        status: "active",
+        startDate: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    // Update invitation
+    await db
+      .update(invitationTable)
+      .set({
+        status: "accepted",
+        acceptedBy: newUser.id,
+        relationshipId: relationship.id,
+        acceptedAt: now,
+      })
+      .where(eq(invitationTable.id, invitation.id));
+
+    // Update both users' currentRelationshipId
+    await db
+      .update(userTable)
+      .set({ currentRelationshipId: relationship.id })
+      .where(
+        or(
+          eq(userTable.id, invitation.createdBy),
+          eq(userTable.id, newUser.id),
+        ),
+      );
+
+    relationshipId = relationship.id;
+
+    // Create tokens for new user
+    const accessToken = await createAccessToken(
+      { userId: newUser.id },
+      context.env.JWT_SECRET,
+    );
+
+    const refreshTokenValue = await createRefreshToken(
+      { userId: newUser.id },
+      context.env.JWT_SECRET,
+    );
+
+    const tokenHash = await hashToken(refreshTokenValue);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await db.insert(refreshTokenTable).values({
+      userId: newUser.id,
+      tokenHash,
+      expiresAt,
+    });
+
+    setAuthCookies(c, accessToken, refreshTokenValue);
+
+    return c.json({ token: accessToken, refreshToken: refreshTokenValue }, 201);
+  }
+
+  // Normal signup without invite code
   const [newUser] = await db
     .insert(userTable)
     .values({
@@ -246,6 +366,31 @@ authApp.openapi(deleteAccount, async (c) => {
 
   const db = getDatabase(context.env);
   const userId = session.userId;
+
+  // Check if user has an active relationship
+  const user = await db
+    .select({ currentRelationshipId: userTable.currentRelationshipId })
+    .from(userTable)
+    .where(eq(userTable.id, userId))
+    .get();
+
+  if (user?.currentRelationshipId) {
+    const relationship = await db
+      .select({ status: relationshipTable.status })
+      .from(relationshipTable)
+      .where(eq(relationshipTable.id, user.currentRelationshipId))
+      .get();
+
+    if (relationship && relationship.status === "active") {
+      return c.json(
+        {
+          error:
+            "Cannot delete account while in an active relationship. Please end your relationship first.",
+        },
+        400,
+      );
+    }
+  }
 
   // Get all posts created by the user to delete their attachments
   const userPosts = await db

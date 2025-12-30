@@ -11,6 +11,7 @@ import {
 } from "@/hooks/mutations/use-user-mutations";
 import { handleApiError } from "@/lib/error-handler";
 import { AvatarEditor } from "./avatar-editor";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   validateImageFile,
   getAvatarUrl,
@@ -58,6 +59,7 @@ export const ProfilePictureSection = ({ user }: ProfilePictureSectionProps) => {
 
   const updateAvatarMutation = useUpdateAvatar();
   const removeAvatarMutation = useRemoveAvatar();
+  const [ConfirmDialog, confirm] = useConfirmDialog();
 
   const cleanupPreviews = useCallback(() => {
     if (originalPreview) revokePreviewUrl(originalPreview);
@@ -70,13 +72,17 @@ export const ProfilePictureSection = ({ user }: ProfilePictureSectionProps) => {
     }
   }, [originalPreview, editedPreview]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const validation = validateImageFile(file);
     if (!validation.isValid) {
-      alert(validation.error);
+      await confirm({
+        title: "Invalid File",
+        description: validation.error || "Invalid file format",
+        confirmText: "OK",
+      });
       return;
     }
 
@@ -112,20 +118,33 @@ export const ProfilePictureSection = ({ user }: ProfilePictureSectionProps) => {
       cleanupPreviews();
     } catch (error) {
       console.error("Failed to upload avatar:", error);
-      alert(handleApiError(error));
+      await confirm({
+        title: "Error",
+        description: handleApiError(error),
+        confirmText: "OK",
+      });
     }
   };
 
   const handleRemoveAvatar = async () => {
-    if (!confirm("Are you sure you want to remove your avatar?")) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Remove Avatar?",
+      description: "Are you sure you want to remove your profile picture?",
+      confirmText: "Remove",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
 
     try {
       await removeAvatarMutation.mutateAsync();
     } catch (error) {
       console.error("Failed to remove avatar:", error);
-      alert(handleApiError(error));
+      await confirm({
+        title: "Error",
+        description: handleApiError(error),
+        confirmText: "OK",
+      });
     }
   };
 
@@ -142,6 +161,7 @@ export const ProfilePictureSection = ({ user }: ProfilePictureSectionProps) => {
 
   return (
     <>
+      <ConfirmDialog />
       <Card>
         <CardHeader>
           <CardTitle>Profile Picture</CardTitle>
