@@ -11,6 +11,7 @@ export const userTable = sqliteTable(
     password: text("password").notNull(),
     displayName: text("display_name"),
     avatar: text("avatar"),
+    currentRelationshipId: integer("current_relationship_id"),
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
@@ -22,6 +23,9 @@ export const userTable = sqliteTable(
     return [
       index("users_email_idx").on(table.email),
       index("users_username_idx").on(table.username),
+      index("users_current_relationship_id_idx").on(
+        table.currentRelationshipId,
+      ),
     ];
   },
 );
@@ -56,6 +60,7 @@ export const postTable = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     text: text("text").notNull(),
     createdBy: integer("created_by").notNull(),
+    relationshipId: integer("relationship_id"),
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
@@ -68,6 +73,7 @@ export const postTable = sqliteTable(
     return [
       index("posts_created_by_idx").on(table.createdBy),
       index("posts_created_at_idx").on(table.createdAt),
+      index("posts_relationship_id_idx").on(table.relationshipId),
     ];
   },
 );
@@ -90,6 +96,69 @@ export const refreshTokenTable = sqliteTable(
       index("refresh_tokens_user_id_idx").on(table.userId),
       index("refresh_tokens_token_hash_idx").on(table.tokenHash),
       index("refresh_tokens_expires_at_idx").on(table.expiresAt),
+    ];
+  },
+);
+
+// Relationships table
+export const relationshipTable = sqliteTable(
+  "relationships",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    user1Id: integer("user1_id").notNull(),
+    user2Id: integer("user2_id").notNull(),
+    status: text("status").notNull(), // 'active' | 'pending_deletion' | 'deleted'
+    startDate: integer("start_date", {
+      mode: "timestamp",
+    }),
+    createdAt: integer("created_at", { mode: "timestamp" }).default(
+      sql`(unixepoch())`,
+    ),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).default(
+      sql`(unixepoch())`,
+    ),
+    deletedAt: integer("deleted_at", { mode: "timestamp" }),
+    endedAt: integer("ended_at", {
+      mode: "timestamp",
+    }),
+    resumeRequestedBy: integer("resume_requested_by"),
+    resumeRequestedAt: integer("resume_requested_at", { mode: "timestamp" }),
+  },
+  (table) => {
+    return [
+      index("relationships_user1_id_idx").on(table.user1Id),
+      index("relationships_user2_id_idx").on(table.user2Id),
+      index("relationships_status_idx").on(table.status),
+      index("relationships_ended_at_idx").on(table.endedAt),
+      index("relationships_resume_requested_by_idx").on(
+        table.resumeRequestedBy,
+      ),
+    ];
+  },
+);
+
+// Invitations table
+export const invitationTable = sqliteTable(
+  "invitations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    inviteCode: text("invite_code").notNull().unique(),
+    createdBy: integer("created_by").notNull(),
+    status: text("status").notNull(), // 'pending' | 'accepted' | 'expired' | 'cancelled'
+    acceptedBy: integer("accepted_by"),
+    relationshipId: integer("relationship_id"),
+    createdAt: integer("created_at", { mode: "timestamp" }).default(
+      sql`(unixepoch())`,
+    ),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    acceptedAt: integer("accepted_at", { mode: "timestamp" }),
+  },
+  (table) => {
+    return [
+      index("invitations_invite_code_idx").on(table.inviteCode),
+      index("invitations_created_by_idx").on(table.createdBy),
+      index("invitations_status_idx").on(table.status),
+      index("invitations_expires_at_idx").on(table.expiresAt),
     ];
   },
 );

@@ -102,6 +102,10 @@ export const deleteAccount = createRoute({
         },
       },
     },
+    400: {
+      description:
+        "Bad request - Cannot delete account while in an active relationship",
+    },
     401: {
       description: "Unauthorized - Not logged in",
     },

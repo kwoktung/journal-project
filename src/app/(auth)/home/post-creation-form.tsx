@@ -192,15 +192,15 @@ export const PostCreationForm = () => {
   const canSubmit = text.trim().length > 0 && !isOverLimit && !isSubmitting;
 
   return (
-    <div className="border rounded-lg p-4">
+    <div className="border border-border rounded-[20px] p-6 shadow-warm bg-card">
       <form onSubmit={handleSubmit} className="space-y-4">
         <Textarea
           name="text"
           ref={textareaRef}
-          placeholder="What's happening?"
+          placeholder="What's on your mind?"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="min-h-24 resize-none border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent!"
+          className="min-h-24 resize-none border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent! content-text placeholder:text-muted-foreground text-2xl!"
           maxLength={MAX_CHARACTERS + 100}
         />
 
@@ -214,7 +214,7 @@ export const PostCreationForm = () => {
           />
         )}
 
-        <div className="flex items-center gap-2 pt-4 border-t">
+        <div className="flex items-center gap-2 pt-4 border-t border-border">
           <div className="relative">
             <input
               ref={fileInputRef}

@@ -106,6 +106,13 @@
                     "minLength": 1,
                     "description": "Cloudflare Turnstile token",
                     "example": "0.abcdefghijklmnopqrstuvwxyz"
+                  },
+                  "inviteCode": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 8,
+                    "description": "Optional invite code to auto-pair with partner",
+                    "example": "AB12CD34"
                   }
                 },
                 "required": ["email", "username", "password", "turnstileToken"]
@@ -178,6 +185,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - Cannot delete account while in an active relationship"
           },
           "401": { "description": "Unauthorized - Not logged in" }
         }
@@ -483,7 +493,7 @@
         }
       }
     },
-    "/api/admin/cleanup-attachments": {
+    "/api/admin/cleanup-orphaned-attachments": {
       "post": {
         "tags": ["admin"],
         "security": [{ "bearerAuth": [] }],
@@ -522,6 +532,51 @@
           },
           "500": {
             "description": "Internal server error - Failed to cleanup attachments"
+          }
+        }
+      }
+    },
+    "/api/admin/cleanup-deleted-couples": {
+      "post": {
+        "tags": ["admin"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Cleanup completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": { "type": "string" },
+                        "deletedCount": { "type": "number" },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "couples": { "type": "number" },
+                            "posts": { "type": "number" },
+                            "attachments": { "type": "number" }
+                          },
+                          "required": ["couples", "posts", "attachments"]
+                        }
+                      },
+                      "required": ["message", "deletedCount", "stats"]
+                    }
+                  },
+                  "required": ["success", "data"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing bearer token"
+          },
+          "500": {
+            "description": "Internal server error - Failed to cleanup deleted couples"
           }
         }
       }
@@ -624,6 +679,381 @@
           "500": {
             "description": "Internal server error - Failed to update avatar"
           }
+        }
+      }
+    },
+    "/api/relationship/invite/create": {
+      "post": {
+        "tags": ["relationship"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "relationshipStartDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Relationship start date (ISO 8601)",
+                    "example": "2024-01-01T00:00:00Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invite created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "inviteCode": {
+                      "type": "string",
+                      "description": "8-character invite code",
+                      "example": "AB12CD34"
+                    },
+                    "inviteUrl": {
+                      "type": "string",
+                      "description": "Full invite URL",
+                      "example": "https://app.example.com/pair?code=AB12CD34"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "description": "Expiration date (ISO 8601)",
+                      "example": "2024-01-08T00:00:00Z"
+                    }
+                  },
+                  "required": ["inviteCode", "inviteUrl", "expiresAt"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request - Invalid data" },
+          "401": { "description": "Unauthorized - Authentication required" },
+          "403": {
+            "description": "Forbidden - User already has an active relationship or pending invite"
+          }
+        }
+      }
+    },
+    "/api/relationship/invite/accept": {
+      "post": {
+        "tags": ["relationship"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "inviteCode": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 8,
+                    "description": "8-character invite code",
+                    "example": "AB12CD34"
+                  }
+                },
+                "required": ["inviteCode"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invite accepted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "relationship": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "number" },
+                        "partner": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "number" },
+                            "username": { "type": "string" },
+                            "displayName": { "type": ["string", "null"] },
+                            "avatar": { "type": ["string", "null"] }
+                          },
+                          "required": [
+                            "id",
+                            "username",
+                            "displayName",
+                            "avatar"
+                          ]
+                        },
+                        "relationshipStartDate": { "type": ["string", "null"] },
+                        "status": { "type": "string" },
+                        "createdAt": { "type": "string" },
+                        "permanentDeletionAt": { "type": ["string", "null"] },
+                        "resumeRequest": {
+                          "type": ["object", "null"],
+                          "properties": {
+                            "requestedBy": { "type": "number" },
+                            "requestedAt": { "type": "string" }
+                          },
+                          "required": ["requestedBy", "requestedAt"]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "partner",
+                        "relationshipStartDate",
+                        "status",
+                        "createdAt",
+                        "permanentDeletionAt",
+                        "resumeRequest"
+                      ]
+                    }
+                  },
+                  "required": ["relationship"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request - Invalid invite code" },
+          "401": { "description": "Unauthorized - Authentication required" },
+          "403": {
+            "description": "Forbidden - Cannot accept own invite or already in relationship"
+          },
+          "404": { "description": "Not found - Invite not found or expired" }
+        }
+      }
+    },
+    "/api/relationship": {
+      "get": {
+        "tags": ["relationship"],
+        "responses": {
+          "200": {
+            "description": "Relationship info retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "relationship": {
+                      "type": ["object", "null"],
+                      "properties": {
+                        "id": { "type": "number" },
+                        "partner": {
+                          "type": "object",
+                          "properties": {
+                            "id": { "type": "number" },
+                            "username": { "type": "string" },
+                            "displayName": { "type": ["string", "null"] },
+                            "avatar": { "type": ["string", "null"] }
+                          },
+                          "required": [
+                            "id",
+                            "username",
+                            "displayName",
+                            "avatar"
+                          ]
+                        },
+                        "relationshipStartDate": { "type": ["string", "null"] },
+                        "status": { "type": "string" },
+                        "createdAt": { "type": "string" },
+                        "permanentDeletionAt": { "type": ["string", "null"] },
+                        "resumeRequest": {
+                          "type": ["object", "null"],
+                          "properties": {
+                            "requestedBy": { "type": "number" },
+                            "requestedAt": { "type": "string" }
+                          },
+                          "required": ["requestedBy", "requestedAt"]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "partner",
+                        "relationshipStartDate",
+                        "status",
+                        "createdAt",
+                        "permanentDeletionAt",
+                        "resumeRequest"
+                      ]
+                    }
+                  },
+                  "required": ["relationship"]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - Authentication required" }
+        }
+      }
+    },
+    "/api/relationship/end": {
+      "post": {
+        "tags": ["relationship"],
+        "responses": {
+          "200": {
+            "description": "Relationship ended successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "permanentDeletionAt": { "type": "string" }
+                  },
+                  "required": ["message", "permanentDeletionAt"]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - Authentication required" },
+          "404": { "description": "Not found - No active relationship found" }
+        }
+      }
+    },
+    "/api/relationship/resume": {
+      "post": {
+        "tags": ["relationship"],
+        "responses": {
+          "200": {
+            "description": "Relationship resumed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "status": { "type": "string" },
+                    "requestedBy": { "type": "number" }
+                  },
+                  "required": ["message", "status"]
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Resume request sent, waiting for partner approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "status": { "type": "string" },
+                    "requestedBy": { "type": "number" }
+                  },
+                  "required": ["message", "status"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request - Grace period has expired" },
+          "401": { "description": "Unauthorized - Authentication required" },
+          "404": {
+            "description": "Not found - No relationship in pending deletion state"
+          }
+        }
+      }
+    },
+    "/api/relationship/resume/cancel": {
+      "post": {
+        "tags": ["relationship"],
+        "responses": {
+          "200": {
+            "description": "Resume request cancelled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "message": { "type": "string" } },
+                  "required": ["message"]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - Authentication required" },
+          "403": { "description": "Forbidden - Not the requester" },
+          "404": { "description": "Not found - No pending resume request" }
+        }
+      }
+    },
+    "/api/relationship/invite/validate": {
+      "get": {
+        "tags": ["relationship"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 8,
+              "description": "8-character invite code",
+              "example": "AB12CD34"
+            },
+            "required": true,
+            "description": "8-character invite code",
+            "name": "code",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invite validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": { "type": "boolean" },
+                    "inviter": {
+                      "type": ["object", "null"],
+                      "properties": {
+                        "id": { "type": "number" },
+                        "username": { "type": "string" },
+                        "displayName": { "type": ["string", "null"] },
+                        "avatar": { "type": ["string", "null"] }
+                      },
+                      "required": ["id", "username", "displayName", "avatar"]
+                    },
+                    "expiresAt": { "type": ["string", "null"] }
+                  },
+                  "required": ["valid", "inviter", "expiresAt"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request - Invalid code format" }
+        }
+      }
+    },
+    "/api/relationship/invite/pending": {
+      "get": {
+        "tags": ["relationship"],
+        "responses": {
+          "200": {
+            "description": "User's pending invitation (if any)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invitation": {
+                      "type": ["object", "null"],
+                      "properties": {
+                        "inviteCode": { "type": "string" },
+                        "inviteUrl": { "type": "string" },
+                        "expiresAt": { "type": "string" }
+                      },
+                      "required": ["inviteCode", "inviteUrl", "expiresAt"]
+                    }
+                  },
+                  "required": ["invitation"]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - Authentication required" }
         }
       }
     }

@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
-import { verifyJWT, JWTPayload } from "../auth/jwt";
+import { verifyJWT, JWTPayload } from "@/lib/auth/jwt";
 import {
   ACCESS_TOKEN_COOKIE_NAME,
   REFRESH_TOKEN_COOKIE_NAME,
 } from "@/config/config";
+import { getContext } from "./context";
 
 type TokenType = "access" | "refresh";
 
@@ -50,11 +51,13 @@ async function getTokenFromCookie(
 /**
  * Gets the current session by checking access token first, then falling back to refresh token
  */
-export async function getSession(secret: string): Promise<JWTPayload | null> {
+export async function getSession(): Promise<JWTPayload | null> {
+  const context = await getContext();
+
   // Try access token first
   const accessTokenPayload = await getTokenFromCookie(
     ACCESS_TOKEN_COOKIE_NAME,
-    secret,
+    context.env.JWT_SECRET,
     "access",
   );
 
@@ -63,5 +66,9 @@ export async function getSession(secret: string): Promise<JWTPayload | null> {
   }
 
   // Fall back to refresh token
-  return getTokenFromCookie(REFRESH_TOKEN_COOKIE_NAME, secret, "refresh");
+  return getTokenFromCookie(
+    REFRESH_TOKEN_COOKIE_NAME,
+    context.env.JWT_SECRET,
+    "refresh",
+  );
 }

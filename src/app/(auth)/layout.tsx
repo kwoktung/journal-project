@@ -1,4 +1,3 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getSession } from "@/lib/next/session";
 import { redirect } from "next/navigation";
 
@@ -7,8 +6,7 @@ export default async function ProtectedLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const context = await getCloudflareContext({ async: true });
-  const session = await getSession(context.env.JWT_SECRET);
+  const session = await getSession();
 
   if (!session) {
     redirect("/sign-in");

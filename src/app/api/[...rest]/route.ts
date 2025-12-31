@@ -6,6 +6,7 @@ import postApp from "@/routes/post/route";
 import attachmentApp from "@/routes/attachment/route";
 import adminApp from "@/routes/admin/route";
 import userApp from "@/routes/user/route";
+import relationshipApp from "@/routes/relationship/route";
 
 const basePath = "/api";
 
@@ -16,6 +17,7 @@ app.route("/posts", postApp);
 app.route("/attachment", attachmentApp);
 app.route("/admin", adminApp);
 app.route("/user", userApp);
+app.route("/relationship", relationshipApp);
 
 // Register security scheme
 app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {

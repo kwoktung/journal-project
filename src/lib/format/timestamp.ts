@@ -55,3 +55,52 @@ export const formatFullTimestamp = (dateString: string): string => {
     hour12: true,
   });
 };
+
+/**
+ * Formats a future timestamp as relative time until that date.
+ * Used for expiration times and countdowns.
+ *
+ * Examples:
+ * - "in 30 seconds"
+ * - "in 5 minutes"
+ * - "in 3 hours"
+ * - "in 2 days"
+ * - "in 6 days"
+ * - "on Jan 7" (more than 7 days away)
+ */
+export const formatTimeUntil = (dateString: string): string => {
+  const target = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((target.getTime() - now.getTime()) / 1000);
+
+  // Already expired
+  if (seconds <= 0) return "expired";
+
+  // Less than 1 minute
+  if (seconds < 60) return "in less than a minute";
+
+  // Less than 1 hour
+  if (seconds < 3600) {
+    const minutes = Math.floor(seconds / 60);
+    return `in ${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+  }
+
+  // Less than 24 hours
+  if (seconds < 86400) {
+    const hours = Math.floor(seconds / 3600);
+    return `in ${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+
+  // Less than 7 days
+  if (seconds < 604800) {
+    const days = Math.floor(seconds / 86400);
+    return `in ${days} ${days === 1 ? "day" : "days"}`;
+  }
+
+  // More than 7 days: show absolute date
+  return `on ${target.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(target.getFullYear() !== now.getFullYear() && { year: "numeric" }),
+  })}`;
+};

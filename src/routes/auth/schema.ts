@@ -32,6 +32,10 @@ export const signUpSchema = z.object({
     description: "Cloudflare Turnstile token",
     example: "0.abcdefghijklmnopqrstuvwxyz",
   }),
+  inviteCode: z.string().length(8).optional().openapi({
+    description: "Optional invite code to auto-pair with partner",
+    example: "AB12CD34",
+  }),
 });
 
 export const signInResponseSchema = z.object({

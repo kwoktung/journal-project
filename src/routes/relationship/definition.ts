@@ -1,0 +1,232 @@
+import { createRoute } from "@hono/zod-openapi";
+import { z } from "@hono/zod-openapi";
+import {
+  createInviteSchema,
+  createInviteResponseSchema,
+  acceptInviteSchema,
+  acceptInviteResponseSchema,
+  getRelationshipResponseSchema,
+  endRelationshipResponseSchema,
+  resumeRelationshipResponseSchema,
+  cancelResumeRequestResponseSchema,
+  validateInviteResponseSchema,
+  getPendingInviteResponseSchema,
+} from "./schema";
+
+export const createInvite = createRoute({
+  method: "post",
+  tags: ["relationship"],
+  path: "/invite/create",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: createInviteSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "Invite created successfully",
+      content: {
+        "application/json": {
+          schema: createInviteResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Bad request - Invalid data",
+    },
+    401: {
+      description: "Unauthorized - Authentication required",
+    },
+    403: {
+      description:
+        "Forbidden - User already has an active relationship or pending invite",
+    },
+  },
+});
+
+export const acceptInvite = createRoute({
+  method: "post",
+  tags: ["relationship"],
+  path: "/invite/accept",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: acceptInviteSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Invite accepted successfully",
+      content: {
+        "application/json": {
+          schema: acceptInviteResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Bad request - Invalid invite code",
+    },
+    401: {
+      description: "Unauthorized - Authentication required",
+    },
+    403: {
+      description:
+        "Forbidden - Cannot accept own invite or already in relationship",
+    },
+    404: {
+      description: "Not found - Invite not found or expired",
+    },
+  },
+});
+
+export const getRelationship = createRoute({
+  method: "get",
+  tags: ["relationship"],
+  path: "/",
+  responses: {
+    200: {
+      description: "Relationship info retrieved successfully",
+      content: {
+        "application/json": {
+          schema: getRelationshipResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized - Authentication required",
+    },
+  },
+});
+
+export const endRelationship = createRoute({
+  method: "post",
+  tags: ["relationship"],
+  path: "/end",
+  responses: {
+    200: {
+      description: "Relationship ended successfully",
+      content: {
+        "application/json": {
+          schema: endRelationshipResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized - Authentication required",
+    },
+    404: {
+      description: "Not found - No active relationship found",
+    },
+  },
+});
+
+export const resumeRelationship = createRoute({
+  method: "post",
+  tags: ["relationship"],
+  path: "/resume",
+  responses: {
+    200: {
+      description: "Relationship resumed successfully",
+      content: {
+        "application/json": {
+          schema: resumeRelationshipResponseSchema,
+        },
+      },
+    },
+    202: {
+      description: "Resume request sent, waiting for partner approval",
+      content: {
+        "application/json": {
+          schema: resumeRelationshipResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized - Authentication required",
+    },
+    404: {
+      description: "Not found - No relationship in pending deletion state",
+    },
+    400: {
+      description: "Bad request - Grace period has expired",
+    },
+  },
+});
+
+export const cancelResumeRequest = createRoute({
+  method: "post",
+  tags: ["relationship"],
+  path: "/resume/cancel",
+  responses: {
+    200: {
+      description: "Resume request cancelled successfully",
+      content: {
+        "application/json": {
+          schema: cancelResumeRequestResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized - Authentication required",
+    },
+    403: {
+      description: "Forbidden - Not the requester",
+    },
+    404: {
+      description: "Not found - No pending resume request",
+    },
+  },
+});
+
+export const validateInvite = createRoute({
+  method: "get",
+  tags: ["relationship"],
+  path: "/invite/validate",
+  request: {
+    query: z.object({
+      code: z.string().length(8).openapi({
+        description: "8-character invite code",
+        example: "AB12CD34",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Invite validation result",
+      content: {
+        "application/json": {
+          schema: validateInviteResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Bad request - Invalid code format",
+    },
+  },
+});
+
+export const getPendingInvite = createRoute({
+  method: "get",
+  tags: ["relationship"],
+  path: "/invite/pending",
+  responses: {
+    200: {
+      description: "User's pending invitation (if any)",
+      content: {
+        "application/json": {
+          schema: getPendingInviteResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Unauthorized - Authentication required",
+    },
+  },
+});
