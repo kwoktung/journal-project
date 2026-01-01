@@ -26,6 +26,7 @@ import {
   hashToken,
   verifyJWT,
 } from "@/lib/auth";
+import { hasActiveRelationship } from "@/database/relationship-helpers";
 import {
   signIn,
   signUp,
@@ -201,20 +202,10 @@ authApp.openapi(signUp, async (c) => {
       return c.json({ error: "Invitation code has expired" }, 400);
     }
 
-    // Get inviter
-    const [inviter] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, invitation.createdBy))
-      .limit(1);
-
-    if (!inviter) {
-      return c.json({ error: "Inviter not found" }, 400);
-    }
-
-    if (inviter.currentRelationshipId) {
+    // Check if inviter already has an active relationship
+    if (await hasActiveRelationship(db, invitation.createdBy)) {
       return c.json(
-        { error: "Inviter is already in a relationship relationship" },
+        { error: "Inviter is already in a relationship" },
         400,
       );
     }
@@ -253,17 +244,6 @@ authApp.openapi(signUp, async (c) => {
         acceptedAt: now,
       })
       .where(eq(invitationTable.id, invitation.id));
-
-    // Update both users' currentRelationshipId
-    await db
-      .update(userTable)
-      .set({ currentRelationshipId: relationship.id })
-      .where(
-        or(
-          eq(userTable.id, invitation.createdBy),
-          eq(userTable.id, newUser.id),
-        ),
-      );
 
     relationshipId = relationship.id;
 
@@ -368,28 +348,14 @@ authApp.openapi(deleteAccount, async (c) => {
   const userId = session.userId;
 
   // Check if user has an active relationship
-  const user = await db
-    .select({ currentRelationshipId: userTable.currentRelationshipId })
-    .from(userTable)
-    .where(eq(userTable.id, userId))
-    .get();
-
-  if (user?.currentRelationshipId) {
-    const relationship = await db
-      .select({ status: relationshipTable.status })
-      .from(relationshipTable)
-      .where(eq(relationshipTable.id, user.currentRelationshipId))
-      .get();
-
-    if (relationship && relationship.status === "active") {
-      return c.json(
-        {
-          error:
-            "Cannot delete account while in an active relationship. Please end your relationship first.",
-        },
-        400,
-      );
-    }
+  if (await hasActiveRelationship(db, userId)) {
+    return c.json(
+      {
+        error:
+          "Cannot delete account while in an active relationship. Please end your relationship first.",
+      },
+      400,
+    );
   }
 
   // Get all posts created by the user to delete their attachments
@@ -401,25 +367,20 @@ authApp.openapi(deleteAccount, async (c) => {
 
   const postIds = userPosts.map((post) => post.id);
 
-  // Soft delete all attachments associated with user's posts
+  // Hard delete all attachments associated with user's posts
   if (postIds.length > 0) {
     for (const postId of postIds) {
       await db
-        .update(attachmentTable)
-        .set({ deletedAt: new Date() })
+        .delete(attachmentTable)
         .where(eq(attachmentTable.postId, postId))
         .run();
     }
 
-    // Soft delete all posts created by the user
-    await db
-      .update(postTable)
-      .set({ deletedAt: new Date() })
-      .where(eq(postTable.createdBy, userId))
-      .run();
+    // Hard delete all posts created by the user
+    await db.delete(postTable).where(eq(postTable.createdBy, userId)).run();
   }
 
-  // Delete the user account
+  // Hard delete the user account
   await db.delete(userTable).where(eq(userTable.id, userId)).run();
 
   // Clear the session cookie

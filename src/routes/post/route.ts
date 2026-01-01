@@ -6,6 +6,7 @@ import { getDatabase } from "@/database/client";
 import { postTable, attachmentTable, userTable } from "@/database/schema";
 import { eq, and, isNull, inArray, desc } from "drizzle-orm";
 import { createPost, queryPosts, deletePost } from "./definition";
+import { getUserActiveRelationship } from "@/database/relationship-helpers";
 
 const postApp = new OpenAPIHono({
   defaultHook: (result, c) => {
@@ -36,30 +37,24 @@ postApp.openapi(createPost, async (c) => {
     const now = new Date();
 
     // Check if user has an active relationship
-    const [user] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.userId))
-      .limit(1);
+    const activeRelationship = await getUserActiveRelationship(
+      db,
+      session.userId,
+    );
 
-    if (!user || !user.currentRelationshipId) {
+    if (!activeRelationship) {
       return c.json(
         { error: "You must pair with a partner before creating posts" },
         403,
       );
     }
 
-    // Validate attachments exist and are not deleted
+    // Validate attachments exist
     if (attachments.length > 0) {
       const validAttachments = await db
         .select()
         .from(attachmentTable)
-        .where(
-          and(
-            inArray(attachmentTable.id, attachments),
-            isNull(attachmentTable.deletedAt),
-          ),
-        );
+        .where(inArray(attachmentTable.id, attachments));
 
       if (validAttachments.length !== attachments.length) {
         return c.json(
@@ -80,7 +75,7 @@ postApp.openapi(createPost, async (c) => {
       .values({
         text,
         createdBy: session.userId,
-        relationshipId: user.currentRelationshipId,
+        relationshipId: activeRelationship.id,
         createdAt: now,
         updatedAt: now,
       })
@@ -94,24 +89,14 @@ postApp.openapi(createPost, async (c) => {
           postId: post.id,
           updatedAt: now,
         })
-        .where(
-          and(
-            inArray(attachmentTable.id, attachments),
-            isNull(attachmentTable.deletedAt),
-          ),
-        );
+        .where(inArray(attachmentTable.id, attachments));
     }
 
     // Fetch attachments for response
     const postAttachments = await db
       .select()
       .from(attachmentTable)
-      .where(
-        and(
-          eq(attachmentTable.postId, post.id),
-          isNull(attachmentTable.deletedAt),
-        ),
-      );
+      .where(eq(attachmentTable.postId, post.id));
 
     // Fetch post with user information using join
     const [postWithUser] = await db
@@ -176,14 +161,13 @@ postApp.openapi(queryPosts, async (c) => {
 
     const db = getDatabase(context.env);
 
-    // Get user's current relationship ID
-    const [user] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.userId))
-      .limit(1);
+    // Get user's active relationship
+    const activeRelationship = await getUserActiveRelationship(
+      db,
+      session.userId,
+    );
 
-    if (!user || !user.currentRelationshipId) {
+    if (!activeRelationship) {
       // No relationship - return empty posts
       return c.json({ posts: [] }, 200);
     }
@@ -201,12 +185,7 @@ postApp.openapi(queryPosts, async (c) => {
       })
       .from(postTable)
       .leftJoin(userTable, eq(postTable.createdBy, userTable.id))
-      .where(
-        and(
-          eq(postTable.relationshipId, user.currentRelationshipId),
-          isNull(postTable.deletedAt),
-        ),
-      )
+      .where(eq(postTable.relationshipId, activeRelationship.id))
       .orderBy(desc(postTable.createdAt));
 
     // Fetch attachments for all posts
@@ -216,12 +195,7 @@ postApp.openapi(queryPosts, async (c) => {
         ? await db
             .select()
             .from(attachmentTable)
-            .where(
-              and(
-                inArray(attachmentTable.postId, postIds),
-                isNull(attachmentTable.deletedAt),
-              ),
-            )
+            .where(inArray(attachmentTable.postId, postIds))
         : [];
 
     // Group attachments by postId
@@ -291,14 +265,13 @@ postApp.openapi(deletePost, async (c) => {
     const db = getDatabase(context.env);
     const now = new Date();
 
-    // Get user's current relationship ID
-    const [user] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.userId))
-      .limit(1);
+    // Get user's active relationship
+    const activeRelationship = await getUserActiveRelationship(
+      db,
+      session.userId,
+    );
 
-    // Check if post exists and belongs to user AND user's relationship
+    // Check if post exists and belongs to user
     const [post] = await db
       .select()
       .from(postTable)
@@ -306,7 +279,6 @@ postApp.openapi(deletePost, async (c) => {
         and(
           eq(postTable.id, postId),
           eq(postTable.createdBy, session.userId), // Only creator can delete
-          isNull(postTable.deletedAt),
         ),
       )
       .limit(1);
@@ -318,43 +290,26 @@ postApp.openapi(deletePost, async (c) => {
       );
     }
 
-    // Verify post belongs to user's relationship
+    // Verify post belongs to user's current active relationship
     if (
-      user &&
-      user.currentRelationshipId &&
-      post.relationshipId !== user.currentRelationshipId
+      activeRelationship &&
+      post.relationshipId !== activeRelationship.id
     ) {
       return c.json(
         {
-          error:
-            "Post does not belong to your current relationship relationship",
+          error: "Post does not belong to your current relationship",
         },
         403,
       );
     }
 
-    // Soft delete the post
+    // Hard delete associated attachments first (due to potential FK constraints)
     await db
-      .update(postTable)
-      .set({
-        deletedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(postTable.id, postId));
+      .delete(attachmentTable)
+      .where(eq(attachmentTable.postId, postId));
 
-    // Soft delete associated attachments
-    await db
-      .update(attachmentTable)
-      .set({
-        deletedAt: now,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(attachmentTable.postId, postId),
-          isNull(attachmentTable.deletedAt),
-        ),
-      );
+    // Hard delete the post
+    await db.delete(postTable).where(eq(postTable.id, postId));
 
     return c.json({ message: "Post deleted successfully" }, 200);
   } catch (error) {

@@ -45,9 +45,7 @@ adminApp.openapi(cleanupOrphanedAttachments, async (c) => {
     const orphanedAttachments = await db
       .select()
       .from(attachmentTable)
-      .where(
-        and(isNull(attachmentTable.postId), isNull(attachmentTable.deletedAt)),
-      );
+      .where(isNull(attachmentTable.postId));
 
     const deletedFilenames: string[] = [];
     const errors: string[] = [];
@@ -142,7 +140,7 @@ adminApp.openapi(cleanupDeletedCouples, async (c) => {
 
     // Process each relationship
     for (const relationship of relationshipsToDelete) {
-      // Soft delete all posts for this relationship
+      // Get all posts for this relationship
       const posts = await db
         .select({ id: postTable.id })
         .from(postTable)
@@ -152,45 +150,28 @@ adminApp.openapi(cleanupDeletedCouples, async (c) => {
       if (posts.length > 0) {
         const postIds = posts.map((p) => p.id);
 
-        // Soft delete attachments for these posts
+        // Hard delete attachments for these posts
         for (const postId of postIds) {
-          await db
-            .update(attachmentTable)
-            .set({ deletedAt: now })
+          const deletedAttachments = await db
+            .delete(attachmentTable)
             .where(eq(attachmentTable.postId, postId))
             .run();
+          totalAttachmentsDeleted += deletedAttachments.meta.changes || 0;
         }
-        totalAttachmentsDeleted += postIds.length;
 
-        // Soft delete posts
+        // Hard delete posts
         await db
-          .update(postTable)
-          .set({ deletedAt: now })
+          .delete(postTable)
           .where(eq(postTable.relationshipId, relationship.id))
           .run();
 
         totalPostsDeleted += posts.length;
       }
 
-      // Update relationship status to 'deleted' and clear users' currentRelationshipId
+      // Hard delete the relationship
       await db
-        .update(relationshipTable)
-        .set({
-          status: "deleted",
-          updatedAt: now,
-        })
+        .delete(relationshipTable)
         .where(eq(relationshipTable.id, relationship.id));
-
-      // Clear both users' currentRelationshipId
-      await db
-        .update(userTable)
-        .set({ currentRelationshipId: null })
-        .where(
-          or(
-            eq(userTable.id, relationship.user1Id),
-            eq(userTable.id, relationship.user2Id),
-          ),
-        );
     }
 
     console.log(

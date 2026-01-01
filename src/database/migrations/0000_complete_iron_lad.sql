@@ -3,8 +3,7 @@ CREATE TABLE `attachments` (
 	`filename` text NOT NULL,
 	`post_id` integer,
 	`created_at` integer DEFAULT (unixepoch()),
-	`updated_at` integer DEFAULT (unixepoch()),
-	`deleted_at` integer
+	`updated_at` integer DEFAULT (unixepoch())
 );
 --> statement-breakpoint
 CREATE INDEX `attachments_filename_idx` ON `attachments` (`filename`);--> statement-breakpoint
@@ -32,8 +31,7 @@ CREATE TABLE `posts` (
 	`created_by` integer NOT NULL,
 	`relationship_id` integer,
 	`created_at` integer DEFAULT (unixepoch()),
-	`updated_at` integer DEFAULT (unixepoch()),
-	`deleted_at` integer
+	`updated_at` integer DEFAULT (unixepoch())
 );
 --> statement-breakpoint
 CREATE INDEX `posts_created_by_idx` ON `posts` (`created_by`);--> statement-breakpoint
@@ -60,7 +58,6 @@ CREATE TABLE `relationships` (
 	`start_date` integer,
 	`created_at` integer DEFAULT (unixepoch()),
 	`updated_at` integer DEFAULT (unixepoch()),
-	`deleted_at` integer,
 	`ended_at` integer,
 	`resume_requested_by` integer,
 	`resume_requested_at` integer
@@ -78,7 +75,6 @@ CREATE TABLE `users` (
 	`password` text NOT NULL,
 	`display_name` text,
 	`avatar` text,
-	`current_relationship_id` integer,
 	`created_at` integer DEFAULT (unixepoch()),
 	`updated_at` integer DEFAULT (unixepoch())
 );
@@ -86,5 +82,4 @@ CREATE TABLE `users` (
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
 CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);--> statement-breakpoint
 CREATE INDEX `users_email_idx` ON `users` (`email`);--> statement-breakpoint
-CREATE INDEX `users_username_idx` ON `users` (`username`);--> statement-breakpoint
-CREATE INDEX `users_current_relationship_id_idx` ON `users` (`current_relationship_id`);
+CREATE INDEX `users_username_idx` ON `users` (`username`);

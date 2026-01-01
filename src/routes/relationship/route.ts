@@ -20,6 +20,11 @@ import {
   getPendingInvite,
 } from "./definition";
 import { generateInviteCode } from "@/lib/invite-code";
+import {
+  getUserActiveRelationship,
+  hasActiveRelationship,
+  getPartnerId,
+} from "@/database/relationship-helpers";
 
 const relationshipApp = new OpenAPIHono({
   defaultHook: (result, c) => {
@@ -46,13 +51,7 @@ relationshipApp.openapi(createInvite, async (c) => {
     const now = new Date();
 
     // Check if user already has an active relationship
-    const [user] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.userId))
-      .limit(1);
-
-    if (user.currentRelationshipId) {
+    if (await hasActiveRelationship(db, session.userId)) {
       return c.json({ error: "You already have an active relationship" }, 403);
     }
 
@@ -161,13 +160,7 @@ relationshipApp.openapi(acceptInvite, async (c) => {
     const now = new Date();
 
     // Check if user already has an active relationship
-    const [user] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.userId))
-      .limit(1);
-
-    if (user.currentRelationshipId) {
+    if (await hasActiveRelationship(db, session.userId)) {
       return c.json({ error: "You already have an active relationship" }, 403);
     }
 
@@ -204,18 +197,8 @@ relationshipApp.openapi(acceptInvite, async (c) => {
       return c.json({ error: "You cannot accept your own invitation" }, 403);
     }
 
-    // Get invitation creator
-    const [creator] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, invitation.createdBy))
-      .limit(1);
-
-    if (!creator) {
-      return c.json({ error: "Invitation creator not found" }, 404);
-    }
-
-    if (creator.currentRelationshipId) {
+    // Check if invitation creator already has an active relationship
+    if (await hasActiveRelationship(db, invitation.createdBy)) {
       return c.json(
         { error: "Invitation creator is already in a relationship" },
         400,
@@ -248,17 +231,6 @@ relationshipApp.openapi(acceptInvite, async (c) => {
           acceptedAt: now,
         })
         .where(eq(invitationTable.id, invitation.id));
-
-      // Update both users' currentRelationshipId
-      await tx
-        .update(userTable)
-        .set({ currentRelationshipId: couple.id })
-        .where(
-          or(
-            eq(userTable.id, invitation.createdBy),
-            eq(userTable.id, session.userId),
-          ),
-        );
 
       return couple;
     })(db);
@@ -315,31 +287,15 @@ relationshipApp.openapi(getRelationship, async (c) => {
 
     const db = getDatabase(context.env);
 
-    // Get user's current couple
-    const [user] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.userId))
-      .limit(1);
-
-    if (!user.currentRelationshipId) {
-      return c.json({ couple: null }, 200);
-    }
-
-    // Get couple info
-    const [couple] = await db
-      .select()
-      .from(relationshipTable)
-      .where(eq(relationshipTable.id, user.currentRelationshipId))
-      .limit(1);
+    // Get user's active relationship
+    const couple = await getUserActiveRelationship(db, session.userId);
 
     if (!couple) {
       return c.json({ couple: null }, 200);
     }
 
     // Get partner ID
-    const partnerId =
-      couple.user1Id === session.userId ? couple.user2Id : couple.user1Id;
+    const partnerId = getPartnerId(couple, session.userId);
 
     // Get partner info
     const [partner] = await db
@@ -411,41 +367,18 @@ relationshipApp.openapi(endRelationship, async (c) => {
     const db = getDatabase(context.env);
     const now = new Date();
 
-    // Get user's current couple
-    const [user] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, session.userId))
-      .limit(1);
-
-    if (!user.currentRelationshipId) {
-      return c.json({ error: "No active relationship found" }, 404);
-    }
-
-    // Get couple
-    const [couple] = await db
-      .select()
-      .from(relationshipTable)
-      .where(
-        and(
-          eq(relationshipTable.id, user.currentRelationshipId),
-          eq(relationshipTable.status, "active"),
-        ),
-      )
-      .limit(1);
+    // Get user's active relationship
+    const couple = await getUserActiveRelationship(db, session.userId);
 
     if (!couple) {
       return c.json({ error: "No active relationship found" }, 404);
     }
 
-    // Update couple status to pending_deletion
-    // Note: currentRelationshipId is NOT cleared here - users need it during grace period
-    // It will be cleared when the couple is permanently deleted after the grace period
+    // Update couple status to pending_deletion (will be hard deleted after grace period)
     await db
       .update(relationshipTable)
       .set({
         status: "pending_deletion",
-        deletedAt: now,
         endedAt: now,
         updatedAt: now,
       })
@@ -562,30 +495,16 @@ relationshipApp.openapi(resumeRelationship, async (c) => {
     }
 
     // State 3: Partner accepting - complete the resume
-    await db.batch([
-      db
-        .update(relationshipTable)
-        .set({
-          status: "active",
-          deletedAt: null,
-          endedAt: null,
-          resumeRequestedBy: null,
-          resumeRequestedAt: null,
-          updatedAt: now,
-        })
-        .where(eq(relationshipTable.id, couple.id)),
-
-      // Restore both users' currentRelationshipId
-      db
-        .update(userTable)
-        .set({ currentRelationshipId: couple.id })
-        .where(
-          or(
-            eq(userTable.id, couple.user1Id),
-            eq(userTable.id, couple.user2Id),
-          ),
-        ),
-    ]);
+    await db
+      .update(relationshipTable)
+      .set({
+        status: "active",
+        endedAt: null,
+        resumeRequestedBy: null,
+        resumeRequestedAt: null,
+        updatedAt: now,
+      })
+      .where(eq(relationshipTable.id, couple.id));
 
     return c.json(
       {

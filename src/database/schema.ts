@@ -11,7 +11,6 @@ export const userTable = sqliteTable(
     password: text("password").notNull(),
     displayName: text("display_name"),
     avatar: text("avatar"),
-    currentRelationshipId: integer("current_relationship_id"),
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
@@ -23,9 +22,6 @@ export const userTable = sqliteTable(
     return [
       index("users_email_idx").on(table.email),
       index("users_username_idx").on(table.username),
-      index("users_current_relationship_id_idx").on(
-        table.currentRelationshipId,
-      ),
     ];
   },
 );
@@ -43,7 +39,6 @@ export const attachmentTable = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
   },
   (table) => {
     return [
@@ -67,7 +62,6 @@ export const postTable = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
   },
   (table) => {
     return [
@@ -107,7 +101,7 @@ export const relationshipTable = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     user1Id: integer("user1_id").notNull(),
     user2Id: integer("user2_id").notNull(),
-    status: text("status").notNull(), // 'active' | 'pending_deletion' | 'deleted'
+    status: text("status").notNull(), // 'active' | 'pending_deletion'
     startDate: integer("start_date", {
       mode: "timestamp",
     }),
@@ -117,7 +111,6 @@ export const relationshipTable = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
-    deletedAt: integer("deleted_at", { mode: "timestamp" }),
     endedAt: integer("ended_at", {
       mode: "timestamp",
     }),
