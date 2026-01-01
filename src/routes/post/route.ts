@@ -87,7 +87,6 @@ postApp.openapi(createPost, async (c) => {
         .update(attachmentTable)
         .set({
           postId: post.id,
-          updatedAt: now,
         })
         .where(inArray(attachmentTable.id, attachments));
     }

@@ -36,9 +36,6 @@ export const attachmentTable = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
-    updatedAt: integer("updated_at", { mode: "timestamp" }).default(
-      sql`(unixepoch())`,
-    ),
   },
   (table) => {
     return [
@@ -73,6 +70,7 @@ export const postTable = sqliteTable(
 );
 
 // Refresh tokens table
+// Note: Tokens are hard deleted on sign out
 export const refreshTokenTable = sqliteTable(
   "refresh_tokens",
   {
@@ -83,7 +81,6 @@ export const refreshTokenTable = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
-    revokedAt: integer("revoked_at", { mode: "timestamp" }),
   },
   (table) => {
     return [
@@ -131,7 +128,8 @@ export const relationshipTable = sqliteTable(
 );
 
 // Invitations table
-// Note: Invitations are hard deleted when accepted or expired
+// Note: Invitations are hard deleted when accepted
+// Invitations never expire - they remain valid until used or replaced
 export const invitationTable = sqliteTable(
   "invitations",
   {
@@ -141,13 +139,11 @@ export const invitationTable = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),
-    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
   },
   (table) => {
     return [
       index("invitations_invite_code_idx").on(table.inviteCode),
       index("invitations_created_by_idx").on(table.createdBy),
-      index("invitations_expires_at_idx").on(table.expiresAt),
     ];
   },
 );

@@ -4,12 +4,8 @@ export const createInviteSchema = z.object({});
 
 export const createInviteResponseSchema = z.object({
   inviteCode: z.string().openapi({
-    description: "8-character invite code",
+    description: "8-character invite code (never expires)",
     example: "AB12CD34",
-  }),
-  expiresAt: z.string().openapi({
-    description: "Expiration date (ISO 8601)",
-    example: "2024-01-08T00:00:00Z",
   }),
 });
 
@@ -65,24 +61,9 @@ export const cancelResumeRequestResponseSchema = z.object({
   message: z.string(),
 });
 
-export const validateInviteSchema = z.object({
-  inviteCode: z.string().length(8).openapi({
-    description: "8-character invite code",
+export const getInviteCodeResponseSchema = z.object({
+  inviteCode: z.string().openapi({
+    description: "8-character invite code (auto-created if none exists)",
     example: "AB12CD34",
   }),
-});
-
-export const validateInviteResponseSchema = z.object({
-  valid: z.boolean(),
-  inviter: userInfoSchema.nullable(),
-  expiresAt: z.string().nullable(),
-});
-
-export const getPendingInviteResponseSchema = z.object({
-  invitation: z
-    .object({
-      inviteCode: z.string(),
-      expiresAt: z.string(),
-    })
-    .nullable(),
 });

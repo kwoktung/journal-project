@@ -1,6 +1,6 @@
 {
-  "id": "0f6a2c96-36c0-46c5-815e-2496eef15e27",
-  "prevId": "aab5d3bf-8702-43ed-ac16-b820546d0539",
+  "id": "f3ac366e-59fe-432b-a4a9-da4b9cf1f9ed",
+  "prevId": "9b78da4e-5a67-4f74-97ad-fe5b3efc209f",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -30,14 +30,6 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": "(unixepoch())"
-        },
-        "updated_at": {
-          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -93,13 +85,6 @@
           "notNull": false,
           "autoincrement": false,
           "default": "(unixepoch())"
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -116,11 +101,6 @@
         "invitations_created_by_idx": {
           "name": "invitations_created_by_idx",
           "columns": ["created_by"],
-          "isUnique": false
-        },
-        "invitations_expires_at_idx": {
-          "name": "invitations_expires_at_idx",
-          "columns": ["expires_at"],
           "isUnique": false
         }
       },
@@ -237,13 +217,6 @@
           "notNull": false,
           "autoincrement": false,
           "default": "(unixepoch())"
-        },
-        "revoked_at": {
-          "name": "revoked_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {

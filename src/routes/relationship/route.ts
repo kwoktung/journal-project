@@ -16,8 +16,7 @@ import {
   endRelationship,
   resumeRelationship,
   cancelResumeRequest,
-  validateInvite,
-  getPendingInvite,
+  getInviteCode,
 } from "./definition";
 import { generateInviteCode } from "@/lib/invite-code";
 import {
@@ -87,15 +86,12 @@ relationshipApp.openapi(createInvite, async (c) => {
       );
     }
 
-    // Create invitation with 7-day expiry
-    const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
+    // Create invitation (never expires)
     const [invitation] = await db
       .insert(invitationTable)
       .values({
         inviteCode,
         createdBy: session.userId,
-        expiresAt,
         createdAt: now,
       })
       .returning();
@@ -103,7 +99,6 @@ relationshipApp.openapi(createInvite, async (c) => {
     return c.json(
       {
         inviteCode: invitation.inviteCode,
-        expiresAt: expiresAt.toISOString(),
       },
       201,
     );
@@ -147,16 +142,6 @@ relationshipApp.openapi(acceptInvite, async (c) => {
 
     if (!invitation) {
       return c.json({ error: "Invitation not found" }, 404);
-    }
-
-    // Check if invitation has expired
-    if (invitation.expiresAt && invitation.expiresAt < now) {
-      // Hard delete expired invitation
-      await db
-        .delete(invitationTable)
-        .where(eq(invitationTable.id, invitation.id));
-
-      return c.json({ error: "Invitation has expired" }, 404);
     }
 
     if (invitation.createdBy === session.userId) {
@@ -209,7 +194,7 @@ relationshipApp.openapi(acceptInvite, async (c) => {
 
     return c.json(
       {
-        couple: {
+        relationship: {
           id: result.id,
           partner: {
             id: partner.id,
@@ -220,6 +205,8 @@ relationshipApp.openapi(acceptInvite, async (c) => {
           relationshipStartDate: result.startDate?.toISOString() || null,
           status: result.status,
           createdAt: result.createdAt?.toISOString() || now.toISOString(),
+          permanentDeletionAt: null,
+          resumeRequest: null,
         },
       },
       200,
@@ -553,84 +540,7 @@ relationshipApp.openapi(cancelResumeRequest, async (c) => {
   }
 });
 
-relationshipApp.openapi(validateInvite, async (c) => {
-  try {
-    const { code } = c.req.valid("query");
-    const context = getCloudflareContext({ async: false });
-    const db = getDatabase(context.env);
-    const now = new Date();
-
-    // Find invitation
-    const [invitation] = await db
-      .select()
-      .from(invitationTable)
-      .where(eq(invitationTable.inviteCode, code))
-      .limit(1);
-
-    if (!invitation) {
-      return c.json(
-        {
-          valid: false,
-          inviter: null,
-          expiresAt: null,
-        },
-        200,
-      );
-    }
-
-    // Check if invitation has expired
-    const isExpired = invitation.expiresAt && invitation.expiresAt < now;
-
-    if (isExpired) {
-      // Hard delete expired invitation
-      await db
-        .delete(invitationTable)
-        .where(eq(invitationTable.id, invitation.id));
-
-      return c.json(
-        {
-          valid: false,
-          inviter: null,
-          expiresAt: invitation.expiresAt?.toISOString() || null,
-        },
-        200,
-      );
-    }
-
-    // Get inviter info
-    const [inviter] = await db
-      .select({
-        id: userTable.id,
-        username: userTable.username,
-        displayName: userTable.displayName,
-        avatar: userTable.avatar,
-      })
-      .from(userTable)
-      .where(eq(userTable.id, invitation.createdBy))
-      .limit(1);
-
-    return c.json(
-      {
-        valid: true,
-        inviter: inviter || null,
-        expiresAt: invitation.expiresAt?.toISOString() || null,
-      },
-      200,
-    );
-  } catch (error) {
-    console.error("Validate invite error:", error);
-    return c.json(
-      {
-        valid: false,
-        inviter: null,
-        expiresAt: null,
-      },
-      200,
-    );
-  }
-});
-
-relationshipApp.openapi(getPendingInvite, async (c) => {
+relationshipApp.openapi(getInviteCode, async (c) => {
   try {
     const context = getCloudflareContext({ async: false });
     const session = await getSession(c, context.env.JWT_SECRET);
@@ -643,39 +553,62 @@ relationshipApp.openapi(getPendingInvite, async (c) => {
     const now = new Date();
 
     // Find user's invitation
-    const [invitation] = await db
+    let [invitation] = await db
       .select()
       .from(invitationTable)
       .where(eq(invitationTable.createdBy, session.userId))
       .orderBy(desc(invitationTable.createdAt))
       .limit(1);
 
+    // Auto-create invitation if none exists
     if (!invitation) {
-      return c.json({ invitation: null }, 200);
-    }
+      // Generate unique invite code
+      let inviteCode = generateInviteCode();
+      let isUnique = false;
+      let attempts = 0;
 
-    // Check if expired and delete if so
-    if (invitation.expiresAt && invitation.expiresAt < now) {
-      // Hard delete expired invitation
-      await db
-        .delete(invitationTable)
-        .where(eq(invitationTable.id, invitation.id));
+      while (!isUnique && attempts < 10) {
+        const existing = await db
+          .select()
+          .from(invitationTable)
+          .where(eq(invitationTable.inviteCode, inviteCode))
+          .limit(1);
 
-      return c.json({ invitation: null }, 200);
+        if (existing.length === 0) {
+          isUnique = true;
+        } else {
+          inviteCode = generateInviteCode();
+          attempts++;
+        }
+      }
+
+      if (!isUnique) {
+        return c.json(
+          { error: "Failed to generate unique invite code. Please try again." },
+          500,
+        );
+      }
+
+      // Create invitation
+      [invitation] = await db
+        .insert(invitationTable)
+        .values({
+          inviteCode,
+          createdBy: session.userId,
+          createdAt: now,
+        })
+        .returning();
     }
 
     return c.json(
       {
-        invitation: {
-          inviteCode: invitation.inviteCode,
-          expiresAt: invitation.expiresAt?.toISOString() || "",
-        },
+        inviteCode: invitation.inviteCode,
       },
       200,
     );
   } catch (error) {
     console.error("Get pending invite error:", error);
-    return c.json({ invitation: null }, 200);
+    return c.json({ error: "Failed to get or create invitation" }, 500);
   }
 });
 

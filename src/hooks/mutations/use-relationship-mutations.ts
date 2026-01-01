@@ -3,7 +3,6 @@ import { apiClient } from "@/lib/client";
 
 interface CreateInviteResponse {
   inviteCode: string;
-  expiresAt: string;
 }
 
 interface AcceptInviteRequest {
@@ -22,7 +21,7 @@ export function useCreateInvite() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["relationship"] });
-      queryClient.invalidateQueries({ queryKey: ["pendingInvite"] });
+      queryClient.invalidateQueries({ queryKey: ["inviteCode"] });
     },
   });
 }

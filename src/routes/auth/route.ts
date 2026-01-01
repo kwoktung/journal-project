@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { eq, or, and, isNull } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import {
   userTable,
   postTable,
@@ -194,14 +194,6 @@ authApp.openapi(signUp, async (c) => {
       return c.json({ error: "Invalid invitation code" }, 400);
     }
 
-    if (invitation.expiresAt && invitation.expiresAt < now) {
-      // Hard delete expired invitation
-      await db
-        .delete(invitationTable)
-        .where(eq(invitationTable.id, invitation.id));
-      return c.json({ error: "Invitation code has expired" }, 400);
-    }
-
     // Check if inviter already has an active relationship
     if (await hasActiveRelationship(db, invitation.createdBy)) {
       return c.json({ error: "Inviter is already in a relationship" }, 400);
@@ -315,9 +307,9 @@ authApp.openapi(signOut, async (c) => {
 
   if (refreshTokenValue) {
     const tokenHash = await hashToken(refreshTokenValue);
+    // Hard delete the refresh token
     await db
-      .update(refreshTokenTable)
-      .set({ revokedAt: new Date() })
+      .delete(refreshTokenTable)
       .where(eq(refreshTokenTable.tokenHash, tokenHash))
       .run();
   }
@@ -408,12 +400,7 @@ authApp.openapi(refreshToken, async (c) => {
   const storedToken = await db
     .select()
     .from(refreshTokenTable)
-    .where(
-      and(
-        eq(refreshTokenTable.tokenHash, tokenHash),
-        isNull(refreshTokenTable.revokedAt),
-      ),
-    )
+    .where(eq(refreshTokenTable.tokenHash, tokenHash))
     .get();
 
   if (!storedToken || storedToken.expiresAt < new Date()) {

@@ -95,7 +95,6 @@ attachmentApp.openapi(createAttachment, async (c) => {
       .values({
         filename,
         createdAt: now,
-        updatedAt: now,
       })
       .returning();
 

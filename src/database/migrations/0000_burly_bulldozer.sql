@@ -2,8 +2,7 @@ CREATE TABLE `attachments` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`filename` text NOT NULL,
 	`post_id` integer,
-	`created_at` integer DEFAULT (unixepoch()),
-	`updated_at` integer DEFAULT (unixepoch())
+	`created_at` integer DEFAULT (unixepoch())
 );
 --> statement-breakpoint
 CREATE INDEX `attachments_filename_idx` ON `attachments` (`filename`);--> statement-breakpoint
@@ -12,14 +11,12 @@ CREATE TABLE `invitations` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`invite_code` text NOT NULL,
 	`created_by` integer NOT NULL,
-	`created_at` integer DEFAULT (unixepoch()),
-	`expires_at` integer NOT NULL
+	`created_at` integer DEFAULT (unixepoch())
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `invitations_invite_code_unique` ON `invitations` (`invite_code`);--> statement-breakpoint
 CREATE INDEX `invitations_invite_code_idx` ON `invitations` (`invite_code`);--> statement-breakpoint
 CREATE INDEX `invitations_created_by_idx` ON `invitations` (`created_by`);--> statement-breakpoint
-CREATE INDEX `invitations_expires_at_idx` ON `invitations` (`expires_at`);--> statement-breakpoint
 CREATE TABLE `posts` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`text` text NOT NULL,
@@ -37,8 +34,7 @@ CREATE TABLE `refresh_tokens` (
 	`user_id` integer NOT NULL,
 	`token_hash` text NOT NULL,
 	`expires_at` integer NOT NULL,
-	`created_at` integer DEFAULT (unixepoch()),
-	`revoked_at` integer
+	`created_at` integer DEFAULT (unixepoch())
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `refresh_tokens_token_hash_unique` ON `refresh_tokens` (`token_hash`);--> statement-breakpoint
