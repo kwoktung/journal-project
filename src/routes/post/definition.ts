@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   createPostRequestSchema,
   postResponseSchema,
+  queryPostsRequestSchema,
   queryPostsResponseSchema,
   deletePostResponseSchema,
 } from "./schema";
@@ -48,6 +49,9 @@ export const queryPosts = createRoute({
   method: "get",
   tags: ["post"],
   path: "/",
+  request: {
+    query: queryPostsRequestSchema,
+  },
   responses: {
     200: {
       description: "Posts retrieved successfully",

@@ -1,6 +1,6 @@
 import { BaseService } from "./service";
 import { postTable, attachmentTable, userTable } from "@/database/schema";
-import { eq, inArray, desc } from "drizzle-orm";
+import { eq, inArray, desc, lt, or, and } from "drizzle-orm";
 import { USER_BASIC_INFO_SELECT } from "@/lib/constants";
 import { HTTPException } from "hono/http-exception";
 import { getUserActiveRelationship } from "@/database/relationship-helpers";
@@ -40,6 +40,11 @@ export interface PostWithUris {
   createdAt: string;
   updatedAt: string | null;
   attachments: PostAttachmentUri[];
+}
+
+export interface PostsWithCursor {
+  posts: PostWithUris[];
+  nextCursor: { createdAt: string; id: number } | null;
 }
 
 /**
@@ -156,13 +161,23 @@ export class PostService extends BaseService {
   }
 
   /**
-   * Retrieves all posts for user's active relationship
+   * Retrieves posts for user's active relationship with cursor-based pagination
    * Returns empty array if user has no active relationship
    *
    * @param userId - User ID to query posts for
-   * @returns Array of posts with user info and attachment URIs
+   * @param options - Optional pagination options (limit and cursor)
+   * @returns Paginated posts with user info, attachment URIs, and next cursor
    */
-  async getRelationshipPosts(userId: number): Promise<PostWithUris[]> {
+  async getRelationshipPosts(
+    userId: number,
+    options?: {
+      limit?: number;
+      cursor?: { createdAt: string; id: number };
+    },
+  ): Promise<PostsWithCursor> {
+    const limit = options?.limit ?? 20;
+    const cursor = options?.cursor;
+
     // Get user's active relationship
     const activeRelationship = await getUserActiveRelationship(
       this.ctx.db,
@@ -171,10 +186,22 @@ export class PostService extends BaseService {
 
     if (!activeRelationship) {
       // No relationship - return empty posts
-      return [];
+      return { posts: [], nextCursor: null };
     }
 
+    // Build cursor-based where clause
+    const cursorCondition = cursor
+      ? or(
+          lt(postTable.createdAt, new Date(cursor.createdAt)),
+          and(
+            eq(postTable.createdAt, new Date(cursor.createdAt)),
+            lt(postTable.id, cursor.id),
+          ),
+        )
+      : undefined;
+
     // Fetch relationship posts with user information
+    // Query limit + 1 to determine if there's a next page
     const postsWithUsers = await this.ctx.db
       .select({
         post: postTable,
@@ -182,11 +209,37 @@ export class PostService extends BaseService {
       })
       .from(postTable)
       .leftJoin(userTable, eq(postTable.createdBy, userTable.id))
-      .where(eq(postTable.relationshipId, activeRelationship.id))
-      .orderBy(desc(postTable.createdAt));
+      .where(
+        cursorCondition
+          ? and(
+              eq(postTable.relationshipId, activeRelationship.id),
+              cursorCondition,
+            )
+          : eq(postTable.relationshipId, activeRelationship.id),
+      )
+      .orderBy(desc(postTable.createdAt), desc(postTable.id))
+      .limit(limit + 1);
 
-    // Fetch attachments for all posts
-    const postIds = postsWithUsers.map((item) => item.post.id);
+    // Determine if there's a next page and slice results
+    const hasNextPage = postsWithUsers.length > limit;
+    const paginatedPosts = hasNextPage
+      ? postsWithUsers.slice(0, limit)
+      : postsWithUsers;
+
+    // Calculate next cursor from the last post in the current page
+    const nextCursor =
+      hasNextPage && paginatedPosts.length > 0
+        ? {
+            createdAt:
+              paginatedPosts[
+                paginatedPosts.length - 1
+              ].post.createdAt?.toISOString() || new Date().toISOString(),
+            id: paginatedPosts[paginatedPosts.length - 1].post.id,
+          }
+        : null;
+
+    // Fetch attachments for all posts in current page
+    const postIds = paginatedPosts.map((item) => item.post.id);
     const allAttachments =
       postIds.length > 0
         ? await this.ctx.db
@@ -210,7 +263,7 @@ export class PostService extends BaseService {
     );
 
     // Build response with posts and their attachments
-    return postsWithUsers.map(({ post, user }) => ({
+    const posts = paginatedPosts.map(({ post, user }) => ({
       id: post.id,
       text: post.text,
       createdBy: post.createdBy,
@@ -228,6 +281,8 @@ export class PostService extends BaseService {
         uri: `/attachment/${att.filename}`,
       })),
     }));
+
+    return { posts, nextCursor };
   }
 
   /**

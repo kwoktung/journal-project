@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from "lucide-react";
+import { List } from "lucide-react";
 import Link from "next/link";
 import { PostCreationForm } from "./post-creation-form";
 import { PostsFeed } from "./posts-feed";
@@ -18,7 +18,13 @@ import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { getUserInitials } from "@/lib/format/user";
 
 const Dashboard = () => {
-  const { data: posts = [], isLoading: loading } = usePosts();
+  const {
+    data,
+    isLoading: loading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = usePosts();
   const { data: relationshipData } = useRelationship();
   const { data: currentUser } = useSession();
   const deletePostMutation = useDeletePost();
@@ -67,14 +73,14 @@ const Dashboard = () => {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3">
                 <div className="relative flex h-14 w-20 items-center">
-                  <Avatar className="absolute left-0 z-10 h-14 w-14 border-4 border-background shadow-md">
+                  <Avatar className="absolute left-0 z-10 h-12 w-12 border-2 border-background shadow-md">
                     <AvatarImage src={currentUser?.avatar || undefined} />
                     <AvatarFallback className="bg-pink-400 text-white text-2xl">
                       {getUserInitials(currentUser)}
                     </AvatarFallback>
                   </Avatar>
                   {partner && (
-                    <Avatar className="absolute left-8 z-0 h-14 w-14 border-4 border-background shadow-md">
+                    <Avatar className="absolute left-8 z-0 h-12 w-12 border-2 border-background shadow-md">
                       <AvatarImage src={partner.avatar || undefined} />
                       <AvatarFallback className="bg-blue-500 text-white text-2xl">
                         {getUserInitials(partner)}
@@ -87,7 +93,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-2">
               <Link href="/settings">
                 <Button variant="ghost" size="icon" title="Settings">
-                  <User className="size-6" />
+                  <List className="size-6" />
                 </Button>
               </Link>
             </div>
@@ -109,8 +115,11 @@ const Dashboard = () => {
           {!isPendingDeletion && <PostCreationForm />}
           <Separator className="my-6" />
           <PostsFeed
-            posts={posts}
+            pages={data?.pages || []}
             loading={loading}
+            hasNextPage={hasNextPage || false}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
             deletingPostId={deletingPostId}
             currentUserId={currentUser?.id}
             onDeletePost={handleDeletePost}

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/client";
 import { queryKeys } from "@/lib/query-keys";
 import { User } from "./use-auth";
@@ -16,12 +16,17 @@ export type Post = {
 };
 
 export function usePosts() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: queryKeys.posts.list(),
-    queryFn: async () => {
-      const data = await apiClient.post.getApiPosts();
-      return data.posts || [];
+    queryFn: async ({ pageParam }) => {
+      const cursor = pageParam ? JSON.stringify(pageParam) : undefined;
+      const data = await apiClient.post.getApiPosts(20, cursor);
+      return data;
     },
+    initialPageParam: undefined as
+      | { createdAt: string; id: number }
+      | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 1000 * 60, // 1 minute
   });
 }

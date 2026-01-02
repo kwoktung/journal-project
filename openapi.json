@@ -325,6 +325,33 @@
       },
       "get": {
         "tags": ["post"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "default": 20,
+              "description": "Number of posts to return per page",
+              "example": 20
+            },
+            "required": false,
+            "description": "Number of posts to return per page",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Cursor for pagination (JSON-encoded object with createdAt and id)",
+              "example": "{\"createdAt\":\"2024-01-01T00:00:00.000Z\",\"id\":123}"
+            },
+            "required": false,
+            "description": "Cursor for pagination (JSON-encoded object with createdAt and id)",
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Posts retrieved successfully",
@@ -383,9 +410,18 @@
                           "attachments"
                         ]
                       }
+                    },
+                    "nextCursor": {
+                      "type": ["object", "null"],
+                      "properties": {
+                        "createdAt": { "type": "string" },
+                        "id": { "type": "number" }
+                      },
+                      "required": ["createdAt", "id"],
+                      "description": "Cursor for the next page of results, null if no more pages"
                     }
                   },
-                  "required": ["posts"]
+                  "required": ["posts", "nextCursor"]
                 }
               }
             }

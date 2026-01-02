@@ -12,7 +12,7 @@ import { Post } from "./types";
 import { ImageGrid } from "./image-grid";
 import { UserAvatar } from "./user-avatar";
 import { formatTimestamp, formatFullTimestamp } from "@/lib/format/timestamp";
-import { getUserInitials } from "@/lib/format/user";
+
 interface PostItemProps {
   post: Post;
   isDeleting: boolean;

@@ -38,13 +38,20 @@ postApp.openapi(createPost, async (c) => {
 
 postApp.openapi(queryPosts, async (c) => {
   const { session, context } = await requireAuth(c);
+  const query = c.req.valid("query");
 
   const ctx = createContext(context.env);
   const services = createServices(ctx);
 
-  const posts = await services.post.getRelationshipPosts(session.userId);
+  // Parse cursor if provided
+  const cursor = query.cursor ? JSON.parse(query.cursor) : undefined;
 
-  return c.json({ posts }, 200);
+  const result = await services.post.getRelationshipPosts(session.userId, {
+    limit: query.limit,
+    cursor,
+  });
+
+  return c.json(result, 200);
 });
 
 postApp.openapi(deletePost, async (c) => {
