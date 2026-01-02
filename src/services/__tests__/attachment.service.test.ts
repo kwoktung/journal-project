@@ -4,7 +4,7 @@ import {
   generateTimestampFilename,
 } from "../attachment.service";
 import { createMockContext } from "@/test/helpers";
-import { ServiceError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 describe("generateTimestampFilename", () => {
   it("should generate filename with timestamp and UUID", () => {
@@ -51,29 +51,29 @@ describe("AttachmentService", () => {
   });
 
   describe("uploadAttachment", () => {
-    it("should throw ServiceError if no file provided", async () => {
+    it("should throw HTTPException if no file provided", async () => {
       await expect(
         attachmentService.uploadAttachment(null as any, 1),
-      ).rejects.toThrow(ServiceError);
+      ).rejects.toThrow(HTTPException);
 
       await expect(
         attachmentService.uploadAttachment(null as any, 1),
       ).rejects.toThrow("No file provided");
     });
 
-    it("should throw ServiceError if file is empty", async () => {
+    it("should throw HTTPException if file is empty", async () => {
       const emptyFile = new File([], "empty.txt", { type: "text/plain" });
 
       await expect(
         attachmentService.uploadAttachment(emptyFile, 1),
-      ).rejects.toThrow(ServiceError);
+      ).rejects.toThrow(HTTPException);
 
       await expect(
         attachmentService.uploadAttachment(emptyFile, 1),
       ).rejects.toThrow("File is empty");
     });
 
-    it("should throw ServiceError if R2 upload fails", async () => {
+    it("should throw HTTPException if R2 upload fails", async () => {
       const file = new File(["test content"], "test.txt", {
         type: "text/plain",
       });
@@ -82,7 +82,7 @@ describe("AttachmentService", () => {
       mockCtx.env.R2.put = vi.fn().mockResolvedValue(null);
 
       await expect(attachmentService.uploadAttachment(file, 1)).rejects.toThrow(
-        ServiceError,
+        HTTPException,
       );
 
       await expect(attachmentService.uploadAttachment(file, 1)).rejects.toThrow(
@@ -164,12 +164,12 @@ describe("AttachmentService", () => {
   });
 
   describe("getAttachment", () => {
-    it("should throw ServiceError if file not found in R2", async () => {
+    it("should throw HTTPException if file not found in R2", async () => {
       mockCtx.env.R2.get = vi.fn().mockResolvedValue(null);
 
       await expect(
         attachmentService.getAttachment("nonexistent.jpg"),
-      ).rejects.toThrow(ServiceError);
+      ).rejects.toThrow(HTTPException);
 
       await expect(
         attachmentService.getAttachment("nonexistent.jpg"),

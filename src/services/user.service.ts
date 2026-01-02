@@ -1,7 +1,7 @@
 import { BaseService } from "./service";
 import { userTable } from "@/database/schema";
 import { eq } from "drizzle-orm";
-import { NotFoundError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 export interface UserInfo {
   id: number;
@@ -78,7 +78,7 @@ export class UserService extends BaseService {
       });
 
     if (!updatedUser) {
-      throw new NotFoundError("User");
+      throw new HTTPException(404, { message: "User not found" });
     }
 
     return {
@@ -121,7 +121,7 @@ export class UserService extends BaseService {
       });
 
     if (!updatedUser) {
-      throw new NotFoundError("User");
+      throw new HTTPException(404, { message: "User not found" });
     }
 
     return {

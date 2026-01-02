@@ -1,32 +1,21 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { HTTPException } from "hono/http-exception";
 import { eq, or } from "drizzle-orm";
 import {
   userTable,
   postTable,
   attachmentTable,
-  refreshTokenTable,
-  relationshipTable,
-  invitationTable,
 } from "@/database/schema";
 import { getDatabase } from "@/database/client";
 import { HttpResponse } from "@/lib/response";
 import {
-  getSession,
   setAuthCookies,
   deleteAuthCookies,
 } from "@/lib/auth/session";
 import { deleteCookie, getCookie } from "hono/cookie";
 import { ACCESS_TOKEN_COOKIE_NAME } from "@/config/config";
-import {
-  hashPassword,
-  verifyPassword,
-  createAccessToken,
-  createRefreshToken,
-  hashToken,
-  verifyJWT,
-} from "@/lib/auth";
+import { hashPassword } from "@/lib/auth";
 import { hasActiveRelationship } from "@/database/relationship-helpers";
 import {
   signIn,
@@ -37,7 +26,7 @@ import {
 } from "./definition";
 import { createContext } from "@/lib/context";
 import { createServices } from "@/services";
-import { InvalidCredentialsError, ServiceError } from "@/lib/errors";
+import { requireAuth } from "@/lib/auth/route-helpers";
 
 // App Setup
 const authApp = new OpenAPIHono({
@@ -54,47 +43,28 @@ const authApp = new OpenAPIHono({
 
 // Route Handlers - defined inline to preserve type definitions
 authApp.openapi(signIn, async (c) => {
-  try {
-    const body = c.req.valid("json");
-    const { login, password } = body;
+  const body = c.req.valid("json");
+  const { login, password } = body;
 
-    if (!login || !password) {
-      return HttpResponse.badRequest(
-        c,
-        "Login (email or username) and password are required",
-      );
-    }
-
-    const context = getCloudflareContext({ async: false });
-    const ctx = createContext(context.env);
-    const services = createServices(ctx);
-
-    // Validate credentials (throws InvalidCredentialsError if invalid)
-    const user = await services.auth.validateCredentials(login, password);
-
-    // Create tokens
-    const { accessToken, refreshToken } = await services.auth.createAuthTokens(
-      user.id,
-    );
-
-    // Set cookies
-    setAuthCookies(c, accessToken, refreshToken);
-
-    // Return both tokens
-    return c.json({ token: accessToken, refreshToken });
-  } catch (error) {
-    if (error instanceof InvalidCredentialsError) {
-      return HttpResponse.unauthorized(c, error.message);
-    }
-    if (error instanceof ServiceError) {
-      return HttpResponse.error(c, {
-        message: error.message,
-        status: error.statusCode as ContentfulStatusCode,
-      });
-    }
-    console.error("Login error:", error);
-    return HttpResponse.error(c, { message: "Login failed", status: 500 });
+  if (!login || !password) {
+    throw new HTTPException(400, {
+      message: "Login (email or username) and password are required"
+    });
   }
+
+  const context = getCloudflareContext({ async: false });
+  const ctx = createContext(context.env);
+  const services = createServices(ctx);
+
+  const user = await services.auth.validateCredentials(login, password);
+
+  const { accessToken, refreshToken } = await services.auth.createAuthTokens(
+    user.id,
+  );
+
+  setAuthCookies(c, accessToken, refreshToken);
+
+  return c.json({ token: accessToken, refreshToken });
 });
 
 authApp.openapi(signUp, async (c) => {
@@ -103,43 +73,50 @@ authApp.openapi(signUp, async (c) => {
     body;
 
   if (!email || !username || !password) {
-    return c.json({ error: "Email, username, and password are required" }, 400);
+    throw new HTTPException(400, {
+      message: "Email, username, and password are required"
+    });
   }
 
   if (!turnstileToken) {
-    return c.json({ error: "Turnstile verification is required" }, 400);
+    throw new HTTPException(400, {
+      message: "Turnstile verification is required"
+    });
   }
 
   const context = getCloudflareContext({ async: false });
-  const now = new Date();
 
-  // Verify Turnstile token
-  const turnstileResponse = await fetch(
-    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        secret: context.env.TURNSTILE_SECRET_KEY,
-        response: turnstileToken,
-      }),
-    },
-  );
-
-  const turnstileResult = await turnstileResponse.json<{
-    success: boolean;
-    "error-codes"?: string[];
-  }>();
-
-  if (!turnstileResult.success) {
-    return c.json(
+  // Verify Turnstile - Keep try/catch for external API call
+  try {
+    const turnstileResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
       {
-        error: "Turnstile verification failed. Please try again.",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret: context.env.TURNSTILE_SECRET_KEY,
+          response: turnstileToken,
+        }),
       },
-      400,
     );
+
+    const turnstileResult = await turnstileResponse.json<{
+      success: boolean;
+      "error-codes"?: string[];
+    }>();
+
+    if (!turnstileResult.success) {
+      throw new HTTPException(400, {
+        message: "Turnstile verification failed. Please try again."
+      });
+    }
+  } catch (error) {
+    if (error instanceof HTTPException) throw error;
+
+    console.error("Turnstile verification error:", error);
+    throw new HTTPException(500, {
+      message: "Verification service unavailable. Please try again later."
+    });
   }
 
   const db = getDatabase(context.env);
@@ -151,32 +128,26 @@ authApp.openapi(signUp, async (c) => {
     .get();
 
   if (existingUser) {
-    return c.json(
-      {
-        error:
-          existingUser.email === email
-            ? "Email already exists"
-            : "Username already exists",
-      },
-      409,
-    );
+    throw new HTTPException(409, {
+      message: existingUser.email === email
+        ? "Email already exists"
+        : "Username already exists"
+    });
   }
 
   const hashedPassword = await hashPassword(password);
+  const ctx = createContext(context.env);
+  const services = createServices(ctx);
 
-  // Process invite code if provided
   if (inviteCode) {
-    const ctx = createContext(context.env);
-    const services = createServices(ctx);
-
-    // Validate invitation before creating user
     const validation = await services.invitation.validateInvitation(inviteCode);
 
     if (!validation.isValid) {
-      return c.json({ error: validation.reason || "Invalid invitation" }, 400);
+      throw new HTTPException(400, {
+        message: validation.reason || "Invalid invitation"
+      });
     }
 
-    // Create user
     const [newUser] = await db
       .insert(userTable)
       .values({
@@ -187,10 +158,8 @@ authApp.openapi(signUp, async (c) => {
       })
       .returning();
 
-    // Accept invitation (creates relationship and deletes invitation)
     await services.invitation.acceptInvitation(inviteCode, newUser.id);
 
-    // Create tokens for new user
     const { accessToken, refreshToken } = await services.auth.createAuthTokens(
       newUser.id,
     );
@@ -200,7 +169,6 @@ authApp.openapi(signUp, async (c) => {
     return c.json({ token: accessToken, refreshToken }, 201);
   }
 
-  // Normal signup without invite code
   const [newUser] = await db
     .insert(userTable)
     .values({
@@ -211,17 +179,12 @@ authApp.openapi(signUp, async (c) => {
     })
     .returning();
 
-  // Create tokens for new user
-  const ctx = createContext(context.env);
-  const services = createServices(ctx);
   const { accessToken, refreshToken } = await services.auth.createAuthTokens(
     newUser.id,
   );
 
-  // Set cookies
   setAuthCookies(c, accessToken, refreshToken);
 
-  // Return both tokens
   return c.json({ token: accessToken, refreshToken }, 201);
 });
 
@@ -241,28 +204,17 @@ authApp.openapi(signOut, async (c) => {
 });
 
 authApp.openapi(deleteAccount, async (c) => {
-  const context = getCloudflareContext({ async: false });
-  const session = await getSession(c, context.env.JWT_SECRET);
-
-  if (!session) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
+  const { session, context } = await requireAuth(c);
 
   const db = getDatabase(context.env);
   const userId = session.userId;
 
-  // Check if user has an active relationship
   if (await hasActiveRelationship(db, userId)) {
-    return c.json(
-      {
-        error:
-          "Cannot delete account while in an active relationship. Please end your relationship first.",
-      },
-      400,
-    );
+    throw new HTTPException(400, {
+      message: "Cannot delete account while in an active relationship. Please end your relationship first."
+    });
   }
 
-  // Get all posts created by the user to delete their attachments
   const userPosts = await db
     .select({ id: postTable.id })
     .from(postTable)
@@ -271,7 +223,6 @@ authApp.openapi(deleteAccount, async (c) => {
 
   const postIds = userPosts.map((post) => post.id);
 
-  // Hard delete all attachments associated with user's posts
   if (postIds.length > 0) {
     for (const postId of postIds) {
       await db
@@ -280,65 +231,44 @@ authApp.openapi(deleteAccount, async (c) => {
         .run();
     }
 
-    // Hard delete all posts created by the user
     await db.delete(postTable).where(eq(postTable.createdBy, userId)).run();
   }
 
-  // Hard delete the user account
   await db.delete(userTable).where(eq(userTable.id, userId)).run();
 
-  // Clear the session cookie
   deleteCookie(c, ACCESS_TOKEN_COOKIE_NAME, { path: "/" });
 
   return c.json({ success: true });
 });
 
 authApp.openapi(refreshToken, async (c) => {
-  try {
-    const context = getCloudflareContext({ async: false });
-    const body = c.req.valid("json");
+  const context = getCloudflareContext({ async: false });
+  const body = c.req.valid("json");
 
-    // Get refresh token from body or cookie
-    let refreshTokenValue = body.refreshToken;
-    if (!refreshTokenValue) {
-      refreshTokenValue = getCookie(c, "refresh_token");
-    }
-
-    if (!refreshTokenValue) {
-      return HttpResponse.unauthorized(c, "Refresh token required");
-    }
-
-    const ctx = createContext(context.env);
-    const services = createServices(ctx);
-
-    // Refresh tokens (validates and rotates)
-    const tokens = await services.auth.refreshAuthTokens(refreshTokenValue);
-
-    if (!tokens) {
-      return HttpResponse.unauthorized(c, "Refresh token expired or revoked");
-    }
-
-    // Set cookies with new tokens
-    setAuthCookies(c, tokens.accessToken, tokens.refreshToken);
-
-    // Return both tokens
-    return c.json({
-      token: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      return HttpResponse.error(c, {
-        message: error.message,
-        status: error.statusCode as ContentfulStatusCode,
-      });
-    }
-    console.error("Token refresh error:", error);
-    return HttpResponse.error(c, {
-      message: "Failed to refresh token",
-      status: 500,
-    });
+  let refreshTokenValue = body.refreshToken;
+  if (!refreshTokenValue) {
+    refreshTokenValue = getCookie(c, "refresh_token");
   }
+
+  if (!refreshTokenValue) {
+    throw new HTTPException(401, { message: "Refresh token required" });
+  }
+
+  const ctx = createContext(context.env);
+  const services = createServices(ctx);
+
+  const tokens = await services.auth.refreshAuthTokens(refreshTokenValue);
+
+  if (!tokens) {
+    throw new HTTPException(401, { message: "Refresh token expired or revoked" });
+  }
+
+  setAuthCookies(c, tokens.accessToken, tokens.refreshToken);
+
+  return c.json({
+    token: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  });
 });
 
 export default authApp;

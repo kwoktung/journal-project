@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { UserService } from "../user.service";
 import { createMockContext } from "@/test/helpers";
-import { NotFoundError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 describe("UserService", () => {
   let userService: UserService;
@@ -132,7 +132,7 @@ describe("UserService", () => {
       expect(result.avatar).toBeNull();
     });
 
-    it("should throw NotFoundError if user not found", async () => {
+    it("should throw HTTPException if user not found", async () => {
       const userId = 1;
 
       mockCtx.db.update = vi.fn().mockReturnValue({
@@ -145,7 +145,7 @@ describe("UserService", () => {
 
       await expect(
         userService.updateAvatar(userId, "https://example.com/avatar.jpg"),
-      ).rejects.toThrow(NotFoundError);
+      ).rejects.toThrow(HTTPException);
     });
   });
 
@@ -200,7 +200,7 @@ describe("UserService", () => {
       expect(result.displayName).toBeNull();
     });
 
-    it("should throw NotFoundError if user not found", async () => {
+    it("should throw HTTPException if user not found", async () => {
       const userId = 1;
 
       mockCtx.db.update = vi.fn().mockReturnValue({
@@ -213,7 +213,7 @@ describe("UserService", () => {
 
       await expect(
         userService.updateProfile(userId, "New Name"),
-      ).rejects.toThrow(NotFoundError);
+      ).rejects.toThrow(HTTPException);
     });
   });
 });

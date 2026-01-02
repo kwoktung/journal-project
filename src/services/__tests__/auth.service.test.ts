@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { AuthService } from "../auth.service";
 import { createMockContext } from "@/test/helpers";
-import { InvalidCredentialsError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 describe("AuthService", () => {
   let authService: AuthService;
@@ -32,7 +32,7 @@ describe("AuthService", () => {
   });
 
   describe("validateCredentials", () => {
-    it("should throw InvalidCredentialsError for non-existent user", async () => {
+    it("should throw HTTPException(401) for non-existent user", async () => {
       // Mock empty result
       mockCtx.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -44,10 +44,10 @@ describe("AuthService", () => {
 
       await expect(
         authService.validateCredentials("wrong@email.com", "password"),
-      ).rejects.toThrow(InvalidCredentialsError);
+      ).rejects.toThrow(HTTPException);
     });
 
-    it("should throw InvalidCredentialsError for wrong password", async () => {
+    it("should throw HTTPException(401) for wrong password", async () => {
       // Mock user exists but password verification will fail
       mockCtx.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -66,7 +66,7 @@ describe("AuthService", () => {
 
       await expect(
         authService.validateCredentials("test@example.com", "wrongPassword"),
-      ).rejects.toThrow(InvalidCredentialsError);
+      ).rejects.toThrow(HTTPException);
     });
 
     it("should return user credentials for valid email and password", async () => {

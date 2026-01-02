@@ -1,12 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { PostService } from "../post.service";
 import { createMockContext } from "@/test/helpers";
-import {
-  NoActiveRelationshipError,
-  InvalidAttachmentsError,
-  PostNotFoundError,
-  WrongRelationshipError,
-} from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 describe("PostService", () => {
   let postService: PostService;
@@ -18,7 +13,7 @@ describe("PostService", () => {
   });
 
   describe("createPost", () => {
-    it("should throw NoActiveRelationshipError if user has no relationship", async () => {
+    it("should throw HTTPException if user has no relationship", async () => {
       // Mock no active relationship
       mockCtx.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -29,11 +24,11 @@ describe("PostService", () => {
       });
 
       await expect(postService.createPost(1, "Test post")).rejects.toThrow(
-        NoActiveRelationshipError,
+        HTTPException,
       );
     });
 
-    it("should throw InvalidAttachmentsError if attachments don't exist", async () => {
+    it("should throw HTTPException if attachments don't exist", async () => {
       const userId = 1;
       const attachmentIds = [1, 2, 3];
 
@@ -66,7 +61,7 @@ describe("PostService", () => {
 
       await expect(
         postService.createPost(userId, "Test post", attachmentIds),
-      ).rejects.toThrow(InvalidAttachmentsError);
+      ).rejects.toThrow(HTTPException);
     });
 
     it("should create post successfully without attachments", async () => {
@@ -389,7 +384,7 @@ describe("PostService", () => {
   });
 
   describe("deletePost", () => {
-    it("should throw PostNotFoundError if post doesn't exist", async () => {
+    it("should throw HTTPException if post doesn't exist", async () => {
       // Mock no active relationship and no post
       mockCtx.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -400,11 +395,11 @@ describe("PostService", () => {
       });
 
       await expect(postService.deletePost(1, 999)).rejects.toThrow(
-        PostNotFoundError,
+        HTTPException,
       );
     });
 
-    it("should throw PostNotFoundError if user doesn't own the post", async () => {
+    it("should throw HTTPException if user doesn't own the post", async () => {
       const userId = 1;
       const postId = 1;
       const ownerId = 2;
@@ -441,11 +436,11 @@ describe("PostService", () => {
       });
 
       await expect(postService.deletePost(userId, postId)).rejects.toThrow(
-        PostNotFoundError,
+        HTTPException,
       );
     });
 
-    it("should throw WrongRelationshipError if post belongs to different relationship", async () => {
+    it("should throw HTTPException if post belongs to different relationship", async () => {
       const userId = 1;
       const postId = 1;
 
@@ -481,7 +476,7 @@ describe("PostService", () => {
       });
 
       await expect(postService.deletePost(userId, postId)).rejects.toThrow(
-        WrongRelationshipError,
+        HTTPException,
       );
     });
 

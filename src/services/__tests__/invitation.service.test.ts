@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { InvitationService } from "../invitation.service";
 import { createMockContext } from "@/test/helpers";
-import {
-  InvalidInvitationError,
-  AlreadyInRelationshipError,
-} from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 describe("InvitationService", () => {
   let invitationService: InvitationService;
@@ -92,7 +89,7 @@ describe("InvitationService", () => {
       expect(mockCtx.db.insert).toHaveBeenCalled();
     });
 
-    it("should throw AlreadyInRelationshipError if user has active relationship", async () => {
+    it("should throw HTTPException if user has active relationship", async () => {
       const userId = 1;
 
       // Mock active relationship exists
@@ -105,7 +102,7 @@ describe("InvitationService", () => {
       });
 
       await expect(invitationService.createInvitation(userId)).rejects.toThrow(
-        AlreadyInRelationshipError,
+        HTTPException,
       );
     });
   });
@@ -337,7 +334,7 @@ describe("InvitationService", () => {
   });
 
   describe("acceptInvitation", () => {
-    it("should throw AlreadyInRelationshipError if accepting user has relationship", async () => {
+    it("should throw HTTPException if accepting user has relationship", async () => {
       const acceptingUserId = 1;
 
       // Mock active relationship exists
@@ -351,10 +348,10 @@ describe("InvitationService", () => {
 
       await expect(
         invitationService.acceptInvitation("TEST1234", acceptingUserId),
-      ).rejects.toThrow(AlreadyInRelationshipError);
+      ).rejects.toThrow(HTTPException);
     });
 
-    it("should throw InvalidInvitationError for invalid invitation", async () => {
+    it("should throw HTTPException for invalid invitation", async () => {
       const acceptingUserId = 1;
 
       let selectCallCount = 0;
@@ -372,7 +369,7 @@ describe("InvitationService", () => {
 
       await expect(
         invitationService.acceptInvitation("NOTFOUND", acceptingUserId),
-      ).rejects.toThrow(InvalidInvitationError);
+      ).rejects.toThrow(HTTPException);
     });
 
     it("should create relationship and delete invitation on success", async () => {

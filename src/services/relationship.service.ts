@@ -2,7 +2,7 @@ import { BaseService } from "./service";
 import { relationshipTable, userTable } from "@/database/schema";
 import { eq, and, or } from "drizzle-orm";
 import { GRACE_PERIOD_MS, USER_BASIC_INFO_SELECT } from "@/lib/constants";
-import { NoActiveRelationshipError, ServiceError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 import {
   getUserActiveRelationship,
   getPartnerId,
@@ -116,7 +116,9 @@ export class RelationshipService extends BaseService {
     const relationship = await getUserActiveRelationship(this.ctx.db, userId);
 
     if (!relationship) {
-      throw new NoActiveRelationshipError();
+      throw new HTTPException(403, {
+        message: "You must pair with a partner before performing this action"
+      });
     }
 
     const now = new Date();
@@ -170,10 +172,9 @@ export class RelationshipService extends BaseService {
       );
 
     if (relationships.length === 0) {
-      throw new ServiceError(
-        "No relationship in pending deletion state found",
-        404,
-      );
+      throw new HTTPException(404, {
+        message: "No relationship in pending deletion state found"
+      });
     }
 
     const relationship = relationships[0];
@@ -184,10 +185,9 @@ export class RelationshipService extends BaseService {
         relationship.endedAt.getTime() + GRACE_PERIOD_MS,
       );
       if (permanentDeletionAt < now) {
-        throw new ServiceError(
-          "Grace period has expired. Relationship cannot be resumed.",
-          400,
-        );
+        throw new HTTPException(400, {
+          message: "Grace period has expired. Relationship cannot be resumed."
+        });
       }
     }
 
@@ -265,17 +265,16 @@ export class RelationshipService extends BaseService {
       );
 
     if (relationships.length === 0 || !relationships[0].resumeRequestedBy) {
-      throw new ServiceError("No pending resume request found", 404);
+      throw new HTTPException(404, { message: "No pending resume request found" });
     }
 
     const relationship = relationships[0];
 
     // Only the requester can cancel
     if (relationship.resumeRequestedBy !== userId) {
-      throw new ServiceError(
-        "Only the requester can cancel the resume request",
-        403,
-      );
+      throw new HTTPException(403, {
+        message: "Only the requester can cancel the resume request"
+      });
     }
 
     // Clear the resume request

@@ -1,11 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { HttpResponse } from "@/lib/response";
 import { getSession } from "@/lib/auth/session";
 import { createContext } from "@/lib/context";
 import { createServices } from "@/services";
-import { ServiceError } from "@/lib/errors";
+import { requireAuth } from "@/lib/auth/route-helpers";
 import { updateAvatar, getUser } from "./definition";
 
 const userApp = new OpenAPIHono({
@@ -41,37 +40,17 @@ userApp.openapi(getUser, async (c) => {
 });
 
 userApp.openapi(updateAvatar, async (c) => {
-  try {
-    const context = getCloudflareContext({ async: false });
-    const session = await getSession(c, context.env.JWT_SECRET);
+  const { session, context } = await requireAuth(c);
 
-    if (!session) {
-      return HttpResponse.unauthorized(c, "Authentication required");
-    }
+  const body = c.req.valid("json");
+  const { avatar } = body;
 
-    const body = c.req.valid("json");
-    const { avatar } = body;
+  const ctx = createContext(context.env);
+  const services = createServices(ctx);
 
-    const ctx = createContext(context.env);
-    const services = createServices(ctx);
+  const user = await services.user.updateAvatar(session.userId, avatar);
 
-    // Update user avatar
-    const user = await services.user.updateAvatar(session.userId, avatar);
-
-    return c.json({ user }, 200);
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      return HttpResponse.error(c, {
-        message: error.message,
-        status: error.statusCode as ContentfulStatusCode,
-      });
-    }
-    console.error("Update avatar error:", error);
-    return HttpResponse.error(c, {
-      message: "Failed to update avatar",
-      status: 500,
-    });
-  }
+  return c.json({ user }, 200);
 });
 
 export default userApp;

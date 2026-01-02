@@ -5,7 +5,7 @@ import { verifyPassword } from "@/lib/auth/password";
 import { refreshTokenTable, userTable } from "@/database/schema";
 import { eq, and, gt, or } from "drizzle-orm";
 import { REFRESH_TOKEN_EXPIRY_MS } from "@/lib/constants";
-import { InvalidCredentialsError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 export interface TokenPair {
   accessToken: string;
@@ -75,12 +75,12 @@ export class AuthService extends BaseService {
       .limit(1);
 
     if (!user) {
-      throw new InvalidCredentialsError();
+      throw new HTTPException(401, { message: "Invalid email or password" });
     }
 
     const isValid = await verifyPassword(password, user.password);
     if (!isValid) {
-      throw new InvalidCredentialsError();
+      throw new HTTPException(401, { message: "Invalid email or password" });
     }
 
     return {

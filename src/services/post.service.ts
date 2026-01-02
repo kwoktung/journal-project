@@ -2,12 +2,7 @@ import { BaseService } from "./service";
 import { postTable, attachmentTable, userTable } from "@/database/schema";
 import { eq, inArray, desc } from "drizzle-orm";
 import { USER_BASIC_INFO_SELECT } from "@/lib/constants";
-import {
-  NoActiveRelationshipError,
-  InvalidAttachmentsError,
-  PostNotFoundError,
-  WrongRelationshipError,
-} from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 import { getUserActiveRelationship } from "@/database/relationship-helpers";
 
 export interface PostUser {
@@ -77,7 +72,9 @@ export class PostService extends BaseService {
     );
 
     if (!activeRelationship) {
-      throw new NoActiveRelationshipError();
+      throw new HTTPException(403, {
+        message: "You must pair with a partner before performing this action"
+      });
     }
 
     // Validate attachments exist if any provided
@@ -91,7 +88,9 @@ export class PostService extends BaseService {
         const invalidIds = attachmentIds.filter(
           (id) => !validAttachments.some((att) => att.id === id),
         );
-        throw new InvalidAttachmentsError(invalidIds);
+        throw new HTTPException(404, {
+          message: `One or more attachment IDs not found or deleted: ${invalidIds.join(", ")}`
+        });
       }
     }
 
@@ -255,17 +254,23 @@ export class PostService extends BaseService {
       .limit(1);
 
     if (!post) {
-      throw new PostNotFoundError();
+      throw new HTTPException(404, {
+        message: "Post not found or you don't have permission to access it"
+      });
     }
 
     // Only creator can delete
     if (post.createdBy !== userId) {
-      throw new PostNotFoundError();
+      throw new HTTPException(404, {
+        message: "Post not found or you don't have permission to access it"
+      });
     }
 
     // Verify post belongs to user's current active relationship
     if (activeRelationship && post.relationshipId !== activeRelationship.id) {
-      throw new WrongRelationshipError();
+      throw new HTTPException(403, {
+        message: "Post does not belong to your current relationship"
+      });
     }
 
     // Hard delete associated attachments first

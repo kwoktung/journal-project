@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { RelationshipService } from "../relationship.service";
 import { createMockContext } from "@/test/helpers";
-import { NoActiveRelationshipError, ServiceError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 describe("RelationshipService", () => {
   let relationshipService: RelationshipService;
@@ -130,7 +130,7 @@ describe("RelationshipService", () => {
   });
 
   describe("endRelationship", () => {
-    it("should throw NoActiveRelationshipError if user has no active relationship", async () => {
+    it("should throw HTTPException if user has no active relationship", async () => {
       // Mock no active relationship
       mockCtx.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -141,7 +141,7 @@ describe("RelationshipService", () => {
       });
 
       await expect(relationshipService.endRelationship(1)).rejects.toThrow(
-        NoActiveRelationshipError,
+        HTTPException,
       );
     });
 
@@ -191,7 +191,7 @@ describe("RelationshipService", () => {
       });
 
       await expect(relationshipService.resumeRelationship(1)).rejects.toThrow(
-        ServiceError,
+        HTTPException,
       );
     });
 
@@ -216,7 +216,7 @@ describe("RelationshipService", () => {
 
       await expect(
         relationshipService.resumeRelationship(userId),
-      ).rejects.toThrow(ServiceError);
+      ).rejects.toThrow(HTTPException);
     });
 
     it("should create resume request when no request exists", async () => {
@@ -317,7 +317,7 @@ describe("RelationshipService", () => {
       });
 
       await expect(relationshipService.cancelResumeRequest(1)).rejects.toThrow(
-        ServiceError,
+        HTTPException,
       );
     });
 
@@ -341,7 +341,7 @@ describe("RelationshipService", () => {
 
       await expect(
         relationshipService.cancelResumeRequest(userId),
-      ).rejects.toThrow(ServiceError);
+      ).rejects.toThrow(HTTPException);
     });
 
     it("should cancel resume request for the requester", async () => {

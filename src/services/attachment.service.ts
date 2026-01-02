@@ -1,6 +1,6 @@
 import { BaseService } from "./service";
 import { attachmentTable } from "@/database/schema";
-import { ServiceError } from "@/lib/errors";
+import { HTTPException } from "hono/http-exception";
 
 export interface AttachmentRecord {
   id: number;
@@ -67,10 +67,10 @@ export class AttachmentService extends BaseService {
   ): Promise<UploadedAttachment> {
     // Validate file
     if (!file) {
-      throw new ServiceError("No file provided", 400);
+      throw new HTTPException(400, { message: "No file provided" });
     }
     if (file.size === 0) {
-      throw new ServiceError("File is empty", 400);
+      throw new HTTPException(400, { message: "File is empty" });
     }
 
     // Generate timestamp-based filename for R2 storage
@@ -90,7 +90,7 @@ export class AttachmentService extends BaseService {
     });
 
     if (!r2UploadResult) {
-      throw new ServiceError("Failed to upload file to storage", 500);
+      throw new HTTPException(500, { message: "Failed to upload file to storage" });
     }
 
     // Save attachment record to database
@@ -121,7 +121,7 @@ export class AttachmentService extends BaseService {
     const object = await this.ctx.env.R2.get(filename);
 
     if (!object) {
-      throw new ServiceError("Attachment not found", 404);
+      throw new HTTPException(404, { message: "Attachment not found" });
     }
 
     return {
