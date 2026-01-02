@@ -49,10 +49,15 @@ export class PostService {
         });
     }
     /**
+     * @param limit Number of posts to return per page
+     * @param cursor Cursor for pagination (JSON-encoded object with createdAt and id)
      * @returns any Posts retrieved successfully
      * @throws ApiError
      */
-    public getApiPosts(): CancelablePromise<{
+    public getApiPosts(
+        limit: number = 20,
+        cursor?: string,
+    ): CancelablePromise<{
         posts: Array<{
             id: number;
             text: string;
@@ -67,10 +72,18 @@ export class PostService {
                 uri: string;
             }>;
         }>;
+        /**
+         * Cursor for the next page of results, null if no more pages
+         */
+        nextCursor: any | null;
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/api/posts',
+            query: {
+                'limit': limit,
+                'cursor': cursor,
+            },
             errors: {
                 401: `Unauthorized - Authentication required`,
                 500: `Internal server error - Failed to retrieve posts`,

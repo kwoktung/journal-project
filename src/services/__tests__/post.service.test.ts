@@ -248,7 +248,7 @@ describe("PostService", () => {
 
       const result = await postService.getRelationshipPosts(1);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ posts: [], nextCursor: null });
     });
 
     it("should return posts with attachments for relationship", async () => {
@@ -260,40 +260,42 @@ describe("PostService", () => {
         from: vi.fn().mockReturnValue({
           leftJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
-              orderBy: vi.fn().mockResolvedValue([
-                {
-                  post: {
-                    id: 1,
-                    text: "Post 1",
-                    createdBy: userId,
-                    relationshipId,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([
+                  {
+                    post: {
+                      id: 1,
+                      text: "Post 1",
+                      createdBy: userId,
+                      relationshipId,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                    user: {
+                      id: userId,
+                      username: "testuser",
+                      displayName: "Test User",
+                      avatar: null,
+                    },
                   },
-                  user: {
-                    id: userId,
-                    username: "testuser",
-                    displayName: "Test User",
-                    avatar: null,
+                  {
+                    post: {
+                      id: 2,
+                      text: "Post 2",
+                      createdBy: 2,
+                      relationshipId,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                    user: {
+                      id: 2,
+                      username: "partner",
+                      displayName: "Partner",
+                      avatar: null,
+                    },
                   },
-                },
-                {
-                  post: {
-                    id: 2,
-                    text: "Post 2",
-                    createdBy: 2,
-                    relationshipId,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  },
-                  user: {
-                    id: 2,
-                    username: "partner",
-                    displayName: "Partner",
-                    avatar: null,
-                  },
-                },
-              ]),
+                ]),
+              }),
             }),
           }),
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -323,10 +325,10 @@ describe("PostService", () => {
 
       const result = await postService.getRelationshipPosts(userId);
 
-      expect(result).toHaveLength(2);
-      expect(result[0].text).toBe("Post 1");
-      expect(result[0].attachments).toHaveLength(1);
-      expect(result[0].attachments[0].uri).toBe("/attachment/file1.jpg");
+      expect(result.posts).toHaveLength(2);
+      expect(result.posts[0].text).toBe("Post 1");
+      expect(result.posts[0].attachments).toHaveLength(1);
+      expect(result.posts[0].attachments[0].uri).toBe("/attachment/file1.jpg");
     });
 
     it("should handle posts with no attachments", async () => {
@@ -337,24 +339,26 @@ describe("PostService", () => {
         from: vi.fn().mockReturnValue({
           leftJoin: vi.fn().mockReturnValue({
             where: vi.fn().mockReturnValue({
-              orderBy: vi.fn().mockResolvedValue([
-                {
-                  post: {
-                    id: 1,
-                    text: "Post without attachments",
-                    createdBy: userId,
-                    relationshipId: 1,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([
+                  {
+                    post: {
+                      id: 1,
+                      text: "Post without attachments",
+                      createdBy: userId,
+                      relationshipId: 1,
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                    user: {
+                      id: userId,
+                      username: "testuser",
+                      displayName: null,
+                      avatar: null,
+                    },
                   },
-                  user: {
-                    id: userId,
-                    username: "testuser",
-                    displayName: null,
-                    avatar: null,
-                  },
-                },
-              ]),
+                ]),
+              }),
             }),
           }),
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -381,8 +385,8 @@ describe("PostService", () => {
 
       const result = await postService.getRelationshipPosts(userId);
 
-      expect(result).toHaveLength(1);
-      expect(result[0].attachments).toHaveLength(0);
+      expect(result.posts).toHaveLength(1);
+      expect(result.posts[0].attachments).toHaveLength(0);
     });
   });
 

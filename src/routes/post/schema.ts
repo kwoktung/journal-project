@@ -45,6 +45,30 @@ export const postResponseSchema = z.object({
   attachments: z.array(postAttachmentSchema).optional(),
 });
 
+export const queryPostsRequestSchema = z.object({
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(100)
+    .default(20)
+    .optional()
+    .openapi({
+      description: "Number of posts to return per page",
+      example: 20,
+    }),
+  cursor: z.string().optional().openapi({
+    description:
+      "Cursor for pagination (JSON-encoded object with createdAt and id)",
+    example: '{"createdAt":"2024-01-01T00:00:00.000Z","id":123}',
+  }),
+});
+
+export const cursorSchema = z.object({
+  createdAt: z.string(),
+  id: z.number(),
+});
+
 export const queryPostsResponseSchema = z.object({
   posts: z.array(
     z.object({
@@ -57,6 +81,9 @@ export const queryPostsResponseSchema = z.object({
       attachments: z.array(queryPostAttachmentSchema),
     }),
   ),
+  nextCursor: cursorSchema.nullable().openapi({
+    description: "Cursor for the next page of results, null if no more pages",
+  }),
 });
 
 export const deletePostResponseSchema = z.object({
