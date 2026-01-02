@@ -117,7 +117,7 @@ export class RelationshipService extends BaseService {
 
     if (!relationship) {
       throw new HTTPException(403, {
-        message: "You must pair with a partner before performing this action"
+        message: "You must pair with a partner before performing this action",
       });
     }
 
@@ -173,7 +173,7 @@ export class RelationshipService extends BaseService {
 
     if (relationships.length === 0) {
       throw new HTTPException(404, {
-        message: "No relationship in pending deletion state found"
+        message: "No relationship in pending deletion state found",
       });
     }
 
@@ -186,7 +186,7 @@ export class RelationshipService extends BaseService {
       );
       if (permanentDeletionAt < now) {
         throw new HTTPException(400, {
-          message: "Grace period has expired. Relationship cannot be resumed."
+          message: "Grace period has expired. Relationship cannot be resumed.",
         });
       }
     }
@@ -265,7 +265,9 @@ export class RelationshipService extends BaseService {
       );
 
     if (relationships.length === 0 || !relationships[0].resumeRequestedBy) {
-      throw new HTTPException(404, { message: "No pending resume request found" });
+      throw new HTTPException(404, {
+        message: "No pending resume request found",
+      });
     }
 
     const relationship = relationships[0];
@@ -273,7 +275,7 @@ export class RelationshipService extends BaseService {
     // Only the requester can cancel
     if (relationship.resumeRequestedBy !== userId) {
       throw new HTTPException(403, {
-        message: "Only the requester can cancel the resume request"
+        message: "Only the requester can cancel the resume request",
       });
     }
 

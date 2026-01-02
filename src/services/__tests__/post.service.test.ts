@@ -35,7 +35,8 @@ describe("PostService", () => {
       let selectCallCount = 0;
       mockCtx.db.select = vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
-          where: vi.fn().mockImplementation((condition) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          where: vi.fn().mockImplementation((_condition) => {
             selectCallCount++;
             if (selectCallCount === 1) {
               // Return active relationship
@@ -295,7 +296,8 @@ describe("PostService", () => {
               ]),
             }),
           }),
-          where: vi.fn().mockImplementation((condition) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          where: vi.fn().mockImplementation((_condition) => {
             selectCallCount++;
             if (selectCallCount === 1) {
               // Return active relationship
@@ -355,7 +357,8 @@ describe("PostService", () => {
               ]),
             }),
           }),
-          where: vi.fn().mockImplementation((condition) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          where: vi.fn().mockImplementation((_condition) => {
             selectCallCount++;
             if (selectCallCount === 1) {
               // Return active relationship

@@ -7,9 +7,8 @@ import {
   attachmentTable,
   relationshipTable,
   postTable,
-  userTable,
 } from "@/database/schema";
-import { isNull, and, eq, lte, or } from "drizzle-orm";
+import { isNull, eq } from "drizzle-orm";
 import { createContext } from "@/lib/context";
 import {
   cleanupOrphanedAttachments,
@@ -62,10 +61,7 @@ adminApp.openapi(cleanupOrphanedAttachments, async (c) => {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       errors.push(`Failed to delete ${attachment.filename}: ${errorMessage}`);
-      console.error(
-        `Error deleting attachment ${attachment.filename}:`,
-        error,
-      );
+      console.error(`Error deleting attachment ${attachment.filename}:`, error);
     }
   }
 
@@ -96,15 +92,13 @@ adminApp.openapi(cleanupDeletedCouples, async (c) => {
     .where(eq(relationshipTable.status, "pending_deletion"))
     .all();
 
-  const relationshipsToDelete = pendingRelationships.filter(
-    (relationship) => {
-      if (!relationship.endedAt) return false;
-      const permanentDeletionAt = new Date(
-        relationship.endedAt.getTime() + 7 * 24 * 60 * 60 * 1000,
-      );
-      return permanentDeletionAt <= now;
-    },
-  );
+  const relationshipsToDelete = pendingRelationships.filter((relationship) => {
+    if (!relationship.endedAt) return false;
+    const permanentDeletionAt = new Date(
+      relationship.endedAt.getTime() + 7 * 24 * 60 * 60 * 1000,
+    );
+    return permanentDeletionAt <= now;
+  });
 
   if (relationshipsToDelete.length === 0) {
     return HttpResponse.success(c, {

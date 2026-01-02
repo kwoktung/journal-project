@@ -18,7 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useSignUp } from "@/hooks/mutations/use-auth-mutations";
 import { handleApiError } from "@/lib/error-handler";
 import { Heart } from "lucide-react";
@@ -190,7 +190,7 @@ export default function SignUp() {
                     You have an invitation code
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    You'll be paired after signing up
+                    You&apos;ll be paired after signing up
                   </p>
                 </div>
               </div>

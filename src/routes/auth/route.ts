@@ -2,17 +2,10 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { HTTPException } from "hono/http-exception";
 import { eq, or } from "drizzle-orm";
-import {
-  userTable,
-  postTable,
-  attachmentTable,
-} from "@/database/schema";
+import { userTable, postTable, attachmentTable } from "@/database/schema";
 import { getDatabase } from "@/database/client";
 import { HttpResponse } from "@/lib/response";
-import {
-  setAuthCookies,
-  deleteAuthCookies,
-} from "@/lib/auth/session";
+import { setAuthCookies, deleteAuthCookies } from "@/lib/auth/session";
 import { deleteCookie, getCookie } from "hono/cookie";
 import { ACCESS_TOKEN_COOKIE_NAME } from "@/config/config";
 import { hashPassword } from "@/lib/auth";
@@ -48,7 +41,7 @@ authApp.openapi(signIn, async (c) => {
 
   if (!login || !password) {
     throw new HTTPException(400, {
-      message: "Login (email or username) and password are required"
+      message: "Login (email or username) and password are required",
     });
   }
 
@@ -74,13 +67,13 @@ authApp.openapi(signUp, async (c) => {
 
   if (!email || !username || !password) {
     throw new HTTPException(400, {
-      message: "Email, username, and password are required"
+      message: "Email, username, and password are required",
     });
   }
 
   if (!turnstileToken) {
     throw new HTTPException(400, {
-      message: "Turnstile verification is required"
+      message: "Turnstile verification is required",
     });
   }
 
@@ -107,7 +100,7 @@ authApp.openapi(signUp, async (c) => {
 
     if (!turnstileResult.success) {
       throw new HTTPException(400, {
-        message: "Turnstile verification failed. Please try again."
+        message: "Turnstile verification failed. Please try again.",
       });
     }
   } catch (error) {
@@ -115,7 +108,7 @@ authApp.openapi(signUp, async (c) => {
 
     console.error("Turnstile verification error:", error);
     throw new HTTPException(500, {
-      message: "Verification service unavailable. Please try again later."
+      message: "Verification service unavailable. Please try again later.",
     });
   }
 
@@ -129,9 +122,10 @@ authApp.openapi(signUp, async (c) => {
 
   if (existingUser) {
     throw new HTTPException(409, {
-      message: existingUser.email === email
-        ? "Email already exists"
-        : "Username already exists"
+      message:
+        existingUser.email === email
+          ? "Email already exists"
+          : "Username already exists",
     });
   }
 
@@ -144,7 +138,7 @@ authApp.openapi(signUp, async (c) => {
 
     if (!validation.isValid) {
       throw new HTTPException(400, {
-        message: validation.reason || "Invalid invitation"
+        message: validation.reason || "Invalid invitation",
       });
     }
 
@@ -211,7 +205,8 @@ authApp.openapi(deleteAccount, async (c) => {
 
   if (await hasActiveRelationship(db, userId)) {
     throw new HTTPException(400, {
-      message: "Cannot delete account while in an active relationship. Please end your relationship first."
+      message:
+        "Cannot delete account while in an active relationship. Please end your relationship first.",
     });
   }
 
@@ -260,7 +255,9 @@ authApp.openapi(refreshToken, async (c) => {
   const tokens = await services.auth.refreshAuthTokens(refreshTokenValue);
 
   if (!tokens) {
-    throw new HTTPException(401, { message: "Refresh token expired or revoked" });
+    throw new HTTPException(401, {
+      message: "Refresh token expired or revoked",
+    });
   }
 
   setAuthCookies(c, tokens.accessToken, tokens.refreshToken);

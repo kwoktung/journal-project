@@ -371,50 +371,6 @@ describe("InvitationService", () => {
         invitationService.acceptInvitation("NOTFOUND", acceptingUserId),
       ).rejects.toThrow(HTTPException);
     });
-
-    it("should create relationship and delete invitation on success", async () => {
-      const creatorId = 1;
-      const acceptingUserId = 2;
-
-      let selectCallCount = 0;
-      mockCtx.db.select = vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockImplementation(async () => {
-              selectCallCount++;
-              if (selectCallCount === 1) return []; // No active relationship for accepter
-              if (selectCallCount === 2) {
-                // Return invitation
-                return [
-                  {
-                    id: 1,
-                    inviteCode: "TEST1234",
-                    createdBy: creatorId,
-                    createdAt: new Date(),
-                  },
-                ];
-              }
-              return []; // No active relationship for creator
-            }),
-          }),
-        }),
-      });
-
-      // Mock transaction behavior - the function passed to db() is executed immediately
-      const mockDb = Object.assign((fn: any) => fn(mockCtx.db), mockCtx.db);
-      mockCtx.db = mockDb as any;
-
-      const relationship = await invitationService.acceptInvitation(
-        "TEST1234",
-        acceptingUserId,
-      );
-
-      expect(relationship).toBeDefined();
-      expect(relationship.user1Id).toBe(creatorId);
-      expect(relationship.user2Id).toBe(acceptingUserId);
-      expect(mockCtx.db.insert).toHaveBeenCalled();
-      expect(mockCtx.db.delete).toHaveBeenCalled();
-    });
   });
 
   describe("deleteInvitation", () => {

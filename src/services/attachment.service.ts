@@ -90,7 +90,9 @@ export class AttachmentService extends BaseService {
     });
 
     if (!r2UploadResult) {
-      throw new HTTPException(500, { message: "Failed to upload file to storage" });
+      throw new HTTPException(500, {
+        message: "Failed to upload file to storage",
+      });
     }
 
     // Save attachment record to database

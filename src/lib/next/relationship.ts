@@ -1,5 +1,5 @@
 import { getDatabase } from "@/database/client";
-import { relationshipTable, userTable } from "@/database/schema";
+import { userTable } from "@/database/schema";
 import { eq } from "drizzle-orm";
 
 import { getSession } from "./session";

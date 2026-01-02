@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   verifyJWT,

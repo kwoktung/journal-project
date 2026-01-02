@@ -31,7 +31,7 @@ app.onError((err, c) => {
         success: false,
         message: err.message,
       },
-      err.status
+      err.status,
     );
   }
 
@@ -48,7 +48,7 @@ app.onError((err, c) => {
         success: false,
         message,
       },
-      400
+      400,
     );
   }
 
@@ -59,9 +59,10 @@ app.onError((err, c) => {
     {
       data: null,
       success: false,
-      message: err instanceof Error ? err.message : "An unexpected error occurred",
+      message:
+        err instanceof Error ? err.message : "An unexpected error occurred",
     },
-    500
+    500,
   );
 });
 

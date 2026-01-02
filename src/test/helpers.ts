@@ -5,7 +5,9 @@ export function createMockContext(): Context {
   return {
     env: {
       JWT_SECRET: "test-secret",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       DB: {} as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       R2: {} as any,
       TURNSTILE_SECRET_KEY: "test-turnstile-key",
     } as CloudflareEnv,
@@ -41,6 +43,7 @@ export function createMockContext(): Context {
         where: vi.fn().mockResolvedValue({}),
       }),
       update: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
   };
 }

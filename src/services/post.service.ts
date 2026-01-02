@@ -73,7 +73,7 @@ export class PostService extends BaseService {
 
     if (!activeRelationship) {
       throw new HTTPException(403, {
-        message: "You must pair with a partner before performing this action"
+        message: "You must pair with a partner before performing this action",
       });
     }
 
@@ -89,7 +89,7 @@ export class PostService extends BaseService {
           (id) => !validAttachments.some((att) => att.id === id),
         );
         throw new HTTPException(404, {
-          message: `One or more attachment IDs not found or deleted: ${invalidIds.join(", ")}`
+          message: `One or more attachment IDs not found or deleted: ${invalidIds.join(", ")}`,
         });
       }
     }
@@ -255,21 +255,21 @@ export class PostService extends BaseService {
 
     if (!post) {
       throw new HTTPException(404, {
-        message: "Post not found or you don't have permission to access it"
+        message: "Post not found or you don't have permission to access it",
       });
     }
 
     // Only creator can delete
     if (post.createdBy !== userId) {
       throw new HTTPException(404, {
-        message: "Post not found or you don't have permission to access it"
+        message: "Post not found or you don't have permission to access it",
       });
     }
 
     // Verify post belongs to user's current active relationship
     if (activeRelationship && post.relationshipId !== activeRelationship.id) {
       throw new HTTPException(403, {
-        message: "Post does not belong to your current relationship"
+        message: "Post does not belong to your current relationship",
       });
     }
 

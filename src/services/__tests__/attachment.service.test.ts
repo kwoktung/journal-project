@@ -53,10 +53,12 @@ describe("AttachmentService", () => {
   describe("uploadAttachment", () => {
     it("should throw HTTPException if no file provided", async () => {
       await expect(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         attachmentService.uploadAttachment(null as any, 1),
       ).rejects.toThrow(HTTPException);
 
       await expect(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         attachmentService.uploadAttachment(null as any, 1),
       ).rejects.toThrow("No file provided");
     });

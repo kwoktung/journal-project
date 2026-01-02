@@ -1,5 +1,4 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { HttpResponse } from "@/lib/response";
 import { getDatabase } from "@/database/client";
 import { userTable } from "@/database/schema";
@@ -138,7 +137,9 @@ relationshipApp.openapi(cancelResumeRequest, async (c) => {
   const ctx = createContext(context.env);
   const services = createServices(ctx);
 
-  const result = await services.relationship.cancelResumeRequest(session.userId);
+  const result = await services.relationship.cancelResumeRequest(
+    session.userId,
+  );
 
   return c.json(result, 200);
 });

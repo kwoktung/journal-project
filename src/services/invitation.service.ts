@@ -76,7 +76,9 @@ export class InvitationService extends BaseService {
   async createInvitation(userId: number): Promise<Invitation> {
     // Check if user already has an active relationship
     if (await hasActiveRelationship(this.ctx.db, userId)) {
-      throw new HTTPException(409, { message: "User is already in a relationship" });
+      throw new HTTPException(409, {
+        message: "User is already in a relationship",
+      });
     }
 
     // Hard delete any existing invitations for this user
@@ -202,7 +204,9 @@ export class InvitationService extends BaseService {
   ): Promise<{ id: number; user1Id: number; user2Id: number }> {
     // Check if accepting user already has an active relationship
     if (await hasActiveRelationship(this.ctx.db, acceptingUserId)) {
-      throw new HTTPException(409, { message: "User is already in a relationship" });
+      throw new HTTPException(409, {
+        message: "User is already in a relationship",
+      });
     }
 
     // Validate invitation
@@ -212,7 +216,9 @@ export class InvitationService extends BaseService {
     );
 
     if (!validation.isValid) {
-      throw new HTTPException(400, { message: `Invalid invitation: ${validation.reason}` });
+      throw new HTTPException(400, {
+        message: `Invalid invitation: ${validation.reason}`,
+      });
     }
 
     const invitation = validation.invitation;
