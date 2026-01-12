@@ -227,7 +227,7 @@ adminApp.openapi(createAdminPost, async (c) => {
   const db = getDatabase(context.env);
 
   const body = c.req.valid("json");
-  const { userId, text, attachmentIds = [] } = body;
+  const { userId, text, attachmentIds = [], createdAt } = body;
 
   // Verify user exists
   const [user] = await db
@@ -244,8 +244,16 @@ adminApp.openapi(createAdminPost, async (c) => {
   }
 
   // Create post using service (service handles relationship validation)
+  // Parse createdAt if provided
+  const customCreatedAt = createdAt ? new Date(createdAt) : undefined;
+
   const services = createServices(ctx);
-  const post = await services.post.createPost(userId, text, attachmentIds);
+  const post = await services.post.createPost(
+    userId,
+    text,
+    attachmentIds,
+    customCreatedAt,
+  );
 
   return HttpResponse.success(c, post);
 });

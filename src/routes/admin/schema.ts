@@ -64,6 +64,11 @@ export const createAdminPostRequestSchema = z.object({
       description: "Array of attachment IDs to link to the post",
       example: [1, 2, 3],
     }),
+  createdAt: z.string().datetime().optional().openapi({
+    description:
+      "Optional custom creation timestamp (ISO 8601 format). If not provided, uses current time.",
+    example: "2024-01-15T10:30:00.000Z",
+  }),
 });
 
 export const createAdminPostDataSchema = z.object({

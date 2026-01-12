@@ -62,6 +62,11 @@ export const queryPostsRequestSchema = z.object({
       "Cursor for pagination (JSON-encoded object with createdAt and id)",
     example: '{"createdAt":"2024-01-01T00:00:00.000Z","id":123}',
   }),
+  keyword: z.string().optional().openapi({
+    description:
+      "Filter posts by keyword search in text content (case-insensitive)",
+    example: "birthday",
+  }),
 });
 
 export const cursorSchema = z.object({

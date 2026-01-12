@@ -1,6 +1,6 @@
 import { BaseService } from "./service";
 import { postTable, attachmentTable, userTable } from "@/database/schema";
-import { eq, inArray, desc, lt, or, and } from "drizzle-orm";
+import { eq, inArray, desc, lt, or, and, sql } from "drizzle-orm";
 import { USER_BASIC_INFO_SELECT } from "@/lib/constants";
 import { HTTPException } from "hono/http-exception";
 import { getUserActiveRelationship } from "@/database/relationship-helpers";
@@ -48,6 +48,18 @@ export interface PostsWithCursor {
 }
 
 /**
+ * Escape FTS5 special characters in search query
+ * FTS5 uses these characters for operators: " - ( ) * AND OR NOT
+ * Replace them with spaces to avoid syntax errors
+ *
+ * @param query - Raw search query from user
+ * @returns Escaped query safe for FTS5 MATCH
+ */
+function escapeFts5Query(query: string): string {
+  return query.replace(/["()*-]/g, " ").trim();
+}
+
+/**
  * Post Service
  * Handles post CRUD operations including attachment management
  */
@@ -59,6 +71,7 @@ export class PostService extends BaseService {
    * @param userId - User ID creating the post
    * @param text - Post text content
    * @param attachmentIds - Array of attachment IDs to link to post
+   * @param createdAt - Optional custom creation timestamp (for admin/testing)
    * @returns Created post with user info and attachments
    * @throws NoActiveRelationshipError if user has no active relationship
    * @throws InvalidAttachmentsError if any attachment IDs are invalid
@@ -67,8 +80,9 @@ export class PostService extends BaseService {
     userId: number,
     text: string,
     attachmentIds: number[] = [],
+    createdAt?: Date,
   ): Promise<PostWithDetails> {
-    const now = new Date();
+    const now = createdAt || new Date();
 
     // Check if user has an active relationship
     const activeRelationship = await getUserActiveRelationship(
@@ -173,10 +187,12 @@ export class PostService extends BaseService {
     options?: {
       limit?: number;
       cursor?: { createdAt: string; id: number };
+      keyword?: string;
     },
   ): Promise<PostsWithCursor> {
     const limit = options?.limit ?? 20;
     const cursor = options?.cursor;
+    const keyword = options?.keyword;
 
     // Get user's active relationship
     const activeRelationship = await getUserActiveRelationship(
@@ -200,6 +216,21 @@ export class PostService extends BaseService {
         )
       : undefined;
 
+    // Build keyword search condition using FTS5
+    const keywordCondition = keyword
+      ? sql`${postTable.id} IN (
+          SELECT rowid FROM posts_fts
+          WHERE posts_fts MATCH ${escapeFts5Query(keyword)}
+        )`
+      : undefined;
+
+    // Combine all conditions
+    const whereConditions = [
+      eq(postTable.relationshipId, activeRelationship.id),
+      cursorCondition,
+      keywordCondition,
+    ].filter(Boolean);
+
     // Fetch relationship posts with user information
     // Query limit + 1 to determine if there's a next page
     const postsWithUsers = await this.ctx.db
@@ -209,14 +240,7 @@ export class PostService extends BaseService {
       })
       .from(postTable)
       .leftJoin(userTable, eq(postTable.createdBy, userTable.id))
-      .where(
-        cursorCondition
-          ? and(
-              eq(postTable.relationshipId, activeRelationship.id),
-              cursorCondition,
-            )
-          : eq(postTable.relationshipId, activeRelationship.id),
-      )
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(desc(postTable.createdAt), desc(postTable.id))
       .limit(limit + 1);
 
