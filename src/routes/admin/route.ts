@@ -7,13 +7,17 @@ import {
   attachmentTable,
   relationshipTable,
   postTable,
+  userTable,
 } from "@/database/schema";
 import { isNull, eq } from "drizzle-orm";
 import { createContext } from "@/lib/context";
 import {
   cleanupOrphanedAttachments,
   cleanupDeletedCouples,
+  createAdminAttachment,
+  createAdminPost,
 } from "./definition";
+import { createServices } from "@/services";
 
 const adminApp = new OpenAPIHono({
   defaultHook: (result, c) => {
@@ -159,6 +163,91 @@ adminApp.openapi(cleanupDeletedCouples, async (c) => {
       attachments: totalAttachmentsDeleted,
     },
   });
+});
+
+// Admin Attachment Upload Handler
+adminApp.openapi(createAdminAttachment, async (c) => {
+  const context = getCloudflareContext({ async: false });
+  const ctx = createContext(context.env);
+  const db = getDatabase(context.env);
+
+  // Parse multipart form data
+  const formData = await c.req.formData();
+  const file = formData.get("file") as File | null;
+  const userIdStr = formData.get("userId") as string | null;
+
+  // Validate inputs
+  if (!file) {
+    return HttpResponse.error(c, {
+      message: "No file provided",
+      status: 400,
+    });
+  }
+
+  if (!userIdStr) {
+    return HttpResponse.error(c, {
+      message: "userId is required",
+      status: 400,
+    });
+  }
+
+  const userId = parseInt(userIdStr, 10);
+  if (isNaN(userId)) {
+    return HttpResponse.error(c, {
+      message: "Invalid userId",
+      status: 400,
+    });
+  }
+
+  // Verify user exists
+  const [user] = await db
+    .select()
+    .from(userTable)
+    .where(eq(userTable.id, userId))
+    .limit(1);
+
+  if (!user) {
+    return HttpResponse.error(c, {
+      message: "User not found",
+      status: 404,
+    });
+  }
+
+  // Upload attachment using service
+  const services = createServices(ctx);
+  const attachment = await services.attachment.uploadAttachment(file, userId);
+
+  return HttpResponse.success(c, attachment);
+});
+
+// Admin Post Creation Handler
+adminApp.openapi(createAdminPost, async (c) => {
+  const context = getCloudflareContext({ async: false });
+  const ctx = createContext(context.env);
+  const db = getDatabase(context.env);
+
+  const body = c.req.valid("json");
+  const { userId, text, attachmentIds = [] } = body;
+
+  // Verify user exists
+  const [user] = await db
+    .select()
+    .from(userTable)
+    .where(eq(userTable.id, userId))
+    .limit(1);
+
+  if (!user) {
+    return HttpResponse.error(c, {
+      message: "User not found",
+      status: 404,
+    });
+  }
+
+  // Create post using service (service handles relationship validation)
+  const services = createServices(ctx);
+  const post = await services.post.createPost(userId, text, attachmentIds);
+
+  return HttpResponse.success(c, post);
 });
 
 export default adminApp;
