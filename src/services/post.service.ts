@@ -3,7 +3,7 @@ import { postTable, attachmentTable, userTable } from "@/database/schema";
 import { eq, inArray, desc, lt, or, and, sql } from "drizzle-orm";
 import { USER_BASIC_INFO_SELECT } from "@/lib/constants";
 import { HTTPException } from "hono/http-exception";
-import { getUserActiveRelationship } from "@/database/relationship-helpers";
+import { getUserRelationship } from "@/database/relationship-helpers";
 
 export interface PostUser {
   id: number;
@@ -85,10 +85,7 @@ export class PostService extends BaseService {
     const now = createdAt || new Date();
 
     // Check if user has an active relationship
-    const activeRelationship = await getUserActiveRelationship(
-      this.ctx.db,
-      userId,
-    );
+    const activeRelationship = await getUserRelationship(this.ctx.db, userId);
 
     if (!activeRelationship) {
       throw new HTTPException(403, {
@@ -195,10 +192,7 @@ export class PostService extends BaseService {
     const keyword = options?.keyword;
 
     // Get user's active relationship
-    const activeRelationship = await getUserActiveRelationship(
-      this.ctx.db,
-      userId,
-    );
+    const activeRelationship = await getUserRelationship(this.ctx.db, userId);
 
     if (!activeRelationship) {
       // No relationship - return empty posts
@@ -320,10 +314,7 @@ export class PostService extends BaseService {
    */
   async deletePost(userId: number, postId: number): Promise<void> {
     // Get user's active relationship
-    const activeRelationship = await getUserActiveRelationship(
-      this.ctx.db,
-      userId,
-    );
+    const userRelationship = await getUserRelationship(this.ctx.db, userId);
 
     // Check if post exists and belongs to user
     const [post] = await this.ctx.db
@@ -346,7 +337,7 @@ export class PostService extends BaseService {
     }
 
     // Verify post belongs to user's current active relationship
-    if (activeRelationship && post.relationshipId !== activeRelationship.id) {
+    if (userRelationship && post.relationshipId !== userRelationship.id) {
       throw new HTTPException(403, {
         message: "Post does not belong to your current relationship",
       });

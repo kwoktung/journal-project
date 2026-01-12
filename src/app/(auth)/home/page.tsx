@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { List } from "lucide-react";
-import Link from "next/link";
 import { PostCreationForm } from "./post-creation-form";
 import { PostsFeed } from "./posts-feed";
 import { GracePeriodBanner } from "./grace-period-banner";
@@ -89,13 +86,6 @@ const Dashboard = () => {
                   )}
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href="/settings">
-                <Button variant="ghost" size="icon" title="Settings">
-                  <List className="size-6" />
-                </Button>
-              </Link>
             </div>
           </div>
 

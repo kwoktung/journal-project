@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { relationshipTable } from "./schema";
 import type { DatabaseClient } from "./client";
 
@@ -8,20 +8,14 @@ import type { DatabaseClient } from "./client";
  * @param userId User ID to check
  * @returns The active relationship if found, null otherwise
  */
-export async function getUserActiveRelationship(
-  db: DatabaseClient,
-  userId: number,
-) {
+export async function getUserRelationship(db: DatabaseClient, userId: number) {
   const [relationship] = await db
     .select()
     .from(relationshipTable)
     .where(
-      and(
-        or(
-          eq(relationshipTable.user1Id, userId),
-          eq(relationshipTable.user2Id, userId),
-        ),
-        eq(relationshipTable.status, "active"),
+      or(
+        eq(relationshipTable.user1Id, userId),
+        eq(relationshipTable.user2Id, userId),
       ),
     )
     .limit(1);
@@ -39,7 +33,7 @@ export async function hasActiveRelationship(
   db: DatabaseClient,
   userId: number,
 ): Promise<boolean> {
-  const relationship = await getUserActiveRelationship(db, userId);
+  const relationship = await getUserRelationship(db, userId);
   return relationship !== null;
 }
 

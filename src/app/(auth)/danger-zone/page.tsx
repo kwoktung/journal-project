@@ -41,7 +41,7 @@ const DangerZonePage = () => {
       <div className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
         {/* Header with Back Button */}
         <div className="mb-4 sm:mb-6">
-          <Link href="/settings">
+          <Link href="/profile">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="mr-2 size-4" />
               Back
@@ -97,10 +97,10 @@ const DangerZonePage = () => {
                       You must end your relationship before deleting your
                       account. Visit the{" "}
                       <Link
-                        href="/settings?tab=relationship"
+                        href="/relationship"
                         className="underline font-medium"
                       >
-                        Relationship tab
+                        Relationship page
                       </Link>{" "}
                       to manage your relationship settings.
                     </p>

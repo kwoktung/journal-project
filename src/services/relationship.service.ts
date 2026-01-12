@@ -4,7 +4,7 @@ import { eq, and, or } from "drizzle-orm";
 import { GRACE_PERIOD_MS, USER_BASIC_INFO_SELECT } from "@/lib/constants";
 import { HTTPException } from "hono/http-exception";
 import {
-  getUserActiveRelationship,
+  getUserRelationship,
   getPartnerId,
 } from "@/database/relationship-helpers";
 
@@ -56,7 +56,7 @@ export class RelationshipService extends BaseService {
     userId: number,
   ): Promise<RelationshipWithPartner | null> {
     // Get user's active relationship
-    const relationship = await getUserActiveRelationship(this.ctx.db, userId);
+    const relationship = await getUserRelationship(this.ctx.db, userId);
 
     if (!relationship) {
       return null;
@@ -113,7 +113,7 @@ export class RelationshipService extends BaseService {
    */
   async endRelationship(userId: number): Promise<EndResult> {
     // Get user's active relationship
-    const relationship = await getUserActiveRelationship(this.ctx.db, userId);
+    const relationship = await getUserRelationship(this.ctx.db, userId);
 
     if (!relationship) {
       throw new HTTPException(403, {
@@ -308,7 +308,7 @@ export class RelationshipService extends BaseService {
     startDate: string,
   ): Promise<{ message: string; relationshipStartDate: string }> {
     // Get user's active relationship
-    const relationship = await getUserActiveRelationship(this.ctx.db, userId);
+    const relationship = await getUserRelationship(this.ctx.db, userId);
 
     if (!relationship) {
       throw new HTTPException(404, {
