@@ -3,10 +3,11 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Image as ImageIcon } from "lucide-react";
+import { Paperclip } from "lucide-react";
 import { EmojiInput } from "@/app/(auth)/home/emoji-input";
 import { ImagePreviewGallery } from "@/app/(auth)/home/image-preview-gallery";
 import { ImageEditorModal } from "@/app/(auth)/home/image-editor-modal";
+import { VideoPreviewModal } from "@/app/(auth)/home/video-preview-modal";
 import { useCreatePost } from "@/hooks/mutations/use-post-mutations";
 import { useUploadAttachment } from "@/hooks/mutations/use-attachment-mutations";
 import { handleApiError } from "@/lib/error-handler";
@@ -14,9 +15,12 @@ import { handleApiError } from "@/lib/error-handler";
 const MAX_CHARACTERS = 280;
 const MAX_ATTACHMENTS = 4;
 
+type FileType = "image" | "video" | "unknown";
+
 interface AttachmentPreview {
   file: File;
   preview?: string;
+  fileType: FileType;
   id?: number;
   filename?: string;
   uploading?: boolean;
@@ -30,14 +34,27 @@ export const PostCreationForm = () => {
   const [error, setError] = useState("");
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [previewingVideoIndex, setPreviewingVideoIndex] = useState<
+    number | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const createPostMutation = useCreatePost();
   const uploadAttachmentMutation = useUploadAttachment();
 
+  const getFileType = (file: File): FileType => {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type.startsWith("video/")) return "video";
+    return "unknown";
+  };
+
   const isImageFile = (file: File): boolean => {
     return file.type.startsWith("image/");
+  };
+
+  const isVideoFile = (file: File): boolean => {
+    return file.type.startsWith("video/");
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,10 +64,18 @@ export const PostCreationForm = () => {
     const newAttachments: AttachmentPreview[] = files
       .slice(0, MAX_ATTACHMENTS - attachments.length)
       .map((file) => {
-        const preview: AttachmentPreview = { file };
-        if (isImageFile(file)) {
+        const fileType = getFileType(file);
+
+        const preview: AttachmentPreview = {
+          file,
+          fileType,
+        };
+
+        // Create preview URL for images and videos
+        if (isImageFile(file) || isVideoFile(file)) {
           preview.preview = URL.createObjectURL(file);
         }
+
         return preview;
       });
 
@@ -210,6 +235,7 @@ export const PostCreationForm = () => {
             attachments={attachments}
             onEdit={setEditingIndex}
             onRemove={removeAttachment}
+            onVideoClick={setPreviewingVideoIndex}
             disabled={isSubmitting}
           />
         )}
@@ -224,7 +250,7 @@ export const PostCreationForm = () => {
               disabled={isSubmitting || attachments.length >= MAX_ATTACHMENTS}
               className="hidden"
               id="file-input"
-              accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+              accept="image/*,video/*"
             />
             <label htmlFor="file-input">
               <Button
@@ -235,8 +261,8 @@ export const PostCreationForm = () => {
                 className="cursor-pointer h-9 w-9 sm:h-10 sm:w-10"
                 asChild
               >
-                <span title="Add image">
-                  <ImageIcon className="size-5 sm:size-6" />
+                <span title="Add image or video">
+                  <Paperclip className="size-5 sm:size-6" />
                 </span>
               </Button>
             </label>
@@ -278,6 +304,20 @@ export const PostCreationForm = () => {
           filename={attachments[editingIndex].file.name}
           onOpenChange={(open) => !open && setEditingIndex(null)}
           onSave={handleEditSave}
+        />
+      )}
+
+      {/* Video Preview Modal */}
+      {previewingVideoIndex !== null && attachments[previewingVideoIndex] && (
+        <VideoPreviewModal
+          open={previewingVideoIndex !== null}
+          videoUrl={
+            attachments[previewingVideoIndex].editedPreview ||
+            attachments[previewingVideoIndex].preview ||
+            URL.createObjectURL(attachments[previewingVideoIndex].file)
+          }
+          filename={attachments[previewingVideoIndex].file.name}
+          onOpenChange={(open) => !open && setPreviewingVideoIndex(null)}
         />
       )}
     </div>

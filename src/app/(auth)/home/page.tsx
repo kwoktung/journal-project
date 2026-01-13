@@ -90,13 +90,13 @@ const Dashboard = () => {
           {/* Search Bar */}
           <div className="mb-4 sm:mb-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground sm:left-4 sm:h-5 sm:w-5" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground sm:left-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
               <Input
                 type="text"
                 placeholder="Search posts..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="h-12 rounded-[20px] shadow-warm pl-10 pr-10 text-base placeholder:text-base sm:h-14 sm:pl-12 sm:pr-12 sm:text-xl sm:placeholder:text-xl"
+                className="h-12 rounded-[20px] shadow-warm pl-10 pr-10 text-base placeholder:text-base sm:h-14 sm:pl-12 sm:pr-12 sm:text-xl sm:placeholder:text-xl md:text-2xl md:placeholder:text-2xl"
               />
               {searchInput && (
                 <Button
