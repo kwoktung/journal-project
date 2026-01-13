@@ -19,7 +19,7 @@
     {
       "binding": "DB",
       "database_name": "moment",
-      "database_id": "400e1ca0-0eef-4806-bda2-cc95484f9555",
+      "database_id": "b708906e-1af0-4ee2-80dd-c2bd05fd27a6",
       "migrations_dir": "./src/database/migrations",
     },
   ],
