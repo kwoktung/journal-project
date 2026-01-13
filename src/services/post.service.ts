@@ -48,15 +48,35 @@ export interface PostsWithCursor {
 }
 
 /**
+ * Checks if a string contains CJK (Chinese, Japanese, Korean) characters
+ * CJK Unicode ranges:
+ * - \u4E00-\u9FFF: CJK Unified Ideographs
+ * - \u3400-\u4DBF: CJK Extension A
+ * - \uF900-\uFAFF: CJK Compatibility Ideographs
+ * - \u3040-\u309F: Hiragana
+ * - \u30A0-\u30FF: Katakana
+ *
+ * @param text - Text to check
+ * @returns True if text contains CJK characters
+ */
+function containsCJK(text: string): boolean {
+  return /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF\u3040-\u309F\u30A0-\u30FF]/.test(
+    text,
+  );
+}
+
+/**
  * Escape FTS5 special characters in search query
- * FTS5 uses these characters for operators: " - ( ) * AND OR NOT
- * Replace them with spaces to avoid syntax errors
+ * For trigram tokenizer, wrap query in quotes for phrase matching
  *
  * @param query - Raw search query from user
- * @returns Escaped query safe for FTS5 MATCH
+ * @returns Escaped and quoted query safe for FTS5 MATCH with trigram tokenizer
  */
 function escapeFts5Query(query: string): string {
-  return query.replace(/["()*-]/g, " ").trim();
+  // Escape any existing quotes by doubling them (FTS5 quote escape syntax)
+  const escaped = query.replace(/"/g, '""').trim();
+  // Wrap in quotes for phrase/substring matching with trigram tokenizer
+  return `"${escaped}"`;
 }
 
 /**
@@ -210,12 +230,17 @@ export class PostService extends BaseService {
         )
       : undefined;
 
-    // Build keyword search condition using FTS5
+    // Build keyword search condition
+    // Use LIKE for CJK (Chinese/Japanese/Korean) text since FTS5 trigram tokenizer
+    // doesn't properly handle multi-byte UTF-8 characters
+    // Use FTS5 for other text (English, etc.) for better performance
     const keywordCondition = keyword
-      ? sql`${postTable.id} IN (
-          SELECT rowid FROM posts_fts
-          WHERE posts_fts MATCH ${escapeFts5Query(keyword)}
-        )`
+      ? containsCJK(keyword)
+        ? sql`${postTable.text} LIKE ${"%" + keyword + "%"}`
+        : sql`${postTable.id} IN (
+            SELECT rowid FROM posts_fts
+            WHERE posts_fts MATCH ${escapeFts5Query(keyword)}
+          )`
       : undefined;
 
     // Combine all conditions

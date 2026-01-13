@@ -34,21 +34,21 @@ export const PostItem = ({
   const displayName = post.user?.username || post.user?.displayName;
 
   return (
-    <div className="group bg-card border border-border rounded-[20px] p-6 shadow-warm">
-      <div className="flex gap-3">
+    <div className="group bg-card border border-border rounded-[20px] p-4 shadow-warm sm:p-6">
+      <div className="flex gap-2 sm:gap-3">
         <UserAvatar
           user={post.user}
           createdBy={post.createdBy}
-          className="size-12"
+          className="size-10 sm:size-12"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col">
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-sm text-foreground sm:text-base">
                 {displayName}
               </span>
               <span
-                className="text-muted-foreground text-sm font-normal"
+                className="text-muted-foreground text-xs font-normal sm:text-sm"
                 title={formatFullTimestamp(post.createdAt)}
               >
                 {formatTimestamp(post.createdAt)}
@@ -90,7 +90,7 @@ export const PostItem = ({
               </DropdownMenu>
             )}
           </div>
-          <p className="mt-2 whitespace-pre-wrap break-words content-text">
+          <p className="mt-2 whitespace-pre-wrap break-words content-text text-base sm:text-lg">
             {post.text}
           </p>
           {post.attachments && post.attachments.length > 0 && (

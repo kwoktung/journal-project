@@ -6,11 +6,13 @@
 -- Create FTS5 virtual table for posts full-text search
 -- Uses 'content' option to avoid duplicating post text
 -- content_rowid links to posts.id
+-- Uses unicode61 tokenizer for word-based languages (English, etc.)
+-- Note: CJK (Chinese/Japanese/Korean) text uses LIKE queries in the service layer
 CREATE VIRTUAL TABLE IF NOT EXISTS posts_fts USING fts5(
   text,
   content='posts',
   content_rowid='id',
-  tokenize='porter unicode61'
+  tokenize='unicode61'
 );
 
 -- Populate FTS5 index with existing posts

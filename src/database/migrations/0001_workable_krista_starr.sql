@@ -42,11 +42,12 @@ END;
 -- Create FTS5 virtual table for posts full-text search
 -- Uses 'content' option to avoid duplicating post text
 -- content_rowid links to posts.id
+-- Uses trigram tokenizer for multi-language support (English, Chinese, etc.)
 CREATE VIRTUAL TABLE IF NOT EXISTS posts_fts USING fts5(
   text,
   content='posts',
   content_rowid='id',
-  tokenize='porter unicode61'
+  tokenize='trigram'
 );
 
 -- Populate FTS5 index with existing posts

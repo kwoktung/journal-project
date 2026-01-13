@@ -228,10 +228,10 @@ export function AttachmentGallery({
         <button
           type="button"
           onClick={handleClose}
-          className="fixed top-6 right-6 z-50 p-3 rounded-full bg-muted/80 hover:bg-muted text-foreground/90 hover:text-foreground transition-all duration-200 backdrop-blur-sm"
+          className="fixed top-3 right-3 z-50 p-2 rounded-full bg-muted/80 hover:bg-muted text-foreground/90 hover:text-foreground transition-all duration-200 backdrop-blur-sm sm:top-6 sm:right-6 sm:p-3"
           aria-label="Close gallery"
         >
-          <X className="size-6" />
+          <X className="size-5 sm:size-6" />
         </button>
 
         {/* Carousel container */}

@@ -15,12 +15,12 @@ export type Post = {
   }>;
 };
 
-export function usePosts() {
+export function usePosts(keyword?: string) {
   return useInfiniteQuery({
-    queryKey: queryKeys.posts.list(),
+    queryKey: queryKeys.posts.list(keyword ? { keyword } : undefined),
     queryFn: async ({ pageParam }) => {
       const cursor = pageParam ? JSON.stringify(pageParam) : undefined;
-      const data = await apiClient.post.getApiPosts(20, cursor);
+      const data = await apiClient.post.getApiPosts(20, cursor, keyword);
       return data;
     },
     initialPageParam: undefined as
