@@ -3,11 +3,14 @@
 import { useEffect } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
-import { X, Crop, Paperclip } from "lucide-react";
+import { X, Crop, Paperclip, Play } from "lucide-react";
+
+type FileType = "image" | "video" | "unknown";
 
 interface AttachmentPreview {
   file: File;
   preview?: string;
+  fileType: FileType;
   editedFile?: File;
   editedPreview?: string;
   hasEdits?: boolean;
@@ -18,6 +21,7 @@ interface ImagePreviewGalleryProps {
   attachments: AttachmentPreview[];
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
+  onVideoClick?: (index: number) => void;
   disabled?: boolean;
 }
 
@@ -25,6 +29,7 @@ export function ImagePreviewGallery({
   attachments,
   onEdit,
   onRemove,
+  onVideoClick,
   disabled,
 }: ImagePreviewGalleryProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -48,10 +53,6 @@ export function ImagePreviewGallery({
     };
   }, [emblaApi]);
 
-  const isImageFile = (file: File): boolean => {
-    return file.type.startsWith("image/");
-  };
-
   return (
     <div className="relative">
       <div className="overflow-hidden" ref={emblaRef}>
@@ -59,7 +60,8 @@ export function ImagePreviewGallery({
           {attachments.map((attachment, index) => {
             const displayPreview =
               attachment.editedPreview || attachment.preview;
-            const isImage = isImageFile(attachment.file);
+            const isImage = attachment.fileType === "image";
+            const isVideo = attachment.fileType === "video";
 
             return (
               <div
@@ -67,6 +69,7 @@ export function ImagePreviewGallery({
                 className="flex-[0_0_auto] w-[120px] sm:w-[140px] relative group"
               >
                 <div className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                  {/* Image Preview */}
                   {isImage && displayPreview ? (
                     <>
                       <Image
@@ -82,7 +85,43 @@ export function ImagePreviewGallery({
                         </div>
                       )}
                     </>
+                  ) : isVideo && displayPreview ? (
+                    /* Video Preview with Play Button */
+                    <>
+                      <video
+                        src={displayPreview}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        preload="metadata"
+                      />
+                      {/* Play button overlay - clickable to preview */}
+                      {onVideoClick && !attachment.uploading && (
+                        <button
+                          type="button"
+                          onClick={() => onVideoClick(index)}
+                          disabled={disabled}
+                          className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group/play"
+                          aria-label="Preview video"
+                        >
+                          <div className="p-2 rounded-full bg-black/60 group-hover/play:bg-black/80 transition-colors backdrop-blur-sm">
+                            <Play className="size-5 text-white fill-white" />
+                          </div>
+                        </button>
+                      )}
+                      {!onVideoClick && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                          <div className="p-2 rounded-full bg-black/60 backdrop-blur-sm">
+                            <Play className="size-5 text-white fill-white" />
+                          </div>
+                        </div>
+                      )}
+                      {attachment.uploading && (
+                        <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                          <div className="w-6 h-6 border-4 border-muted-foreground/20 border-t-foreground rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </>
                   ) : (
+                    /* Fallback for unknown types */
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-2">
                       <Paperclip className="size-6 text-muted-foreground" />
                       <span className="text-xs text-center truncate w-full text-muted-foreground">

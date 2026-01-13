@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   useCreateInvite,
   useAcceptInvite,
@@ -13,8 +15,6 @@ import {
   useRelationship,
 } from "@/hooks/queries/use-relationship";
 import { handleApiError } from "@/lib/error-handler";
-import { useRouter } from "next/navigation";
-import { Copy, Check } from "lucide-react";
 
 interface CopyButtonProps {
   text: string;
@@ -135,7 +135,7 @@ function RelationshipPoller() {
   return null;
 }
 
-export default function PairPage() {
+export function NoRelationshipState() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"create" | "accept">("create");
   const [inviteCode, setInviteCode] = useState("");

@@ -22,6 +22,7 @@ interface PostsFeedProps {
   deletingPostId: number | null;
   currentUserId?: number;
   onDeletePost: (postId: number) => void;
+  searchQuery?: string;
 }
 
 export const PostsFeed = ({
@@ -33,6 +34,7 @@ export const PostsFeed = ({
   deletingPostId,
   currentUserId,
   onDeletePost,
+  searchQuery,
 }: PostsFeedProps) => {
   const [galleryState, setGalleryState] = useState<{
     open: boolean;
@@ -72,7 +74,17 @@ export const PostsFeed = ({
         </div>
       ) : allPosts.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
-          No posts yet. Create your first post above!
+          {searchQuery ? (
+            <>
+              <p className="text-lg font-medium">No posts found</p>
+              <p className="mt-2">
+                No posts match &quot;{searchQuery}&quot;. Try a different search
+                term.
+              </p>
+            </>
+          ) : (
+            "No posts yet. Create your first post above!"
+          )}
         </div>
       ) : (
         <>

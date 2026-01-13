@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getSession } from "./session";
 import { getContext } from "./context";
 import {
-  getUserActiveRelationship,
+  getUserRelationship,
   getPartnerId,
 } from "@/database/relationship-helpers";
 
@@ -39,7 +39,7 @@ export async function getRelationship(): Promise<RelationshipInfo | null> {
   const db = getDatabase(context.env);
 
   // Get user's active relationship
-  const relationship = await getUserActiveRelationship(db, session.userId);
+  const relationship = await getUserRelationship(db, session.userId);
 
   if (!relationship) {
     return null;

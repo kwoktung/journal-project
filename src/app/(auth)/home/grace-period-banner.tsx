@@ -104,18 +104,17 @@ export const GracePeriodBanner = ({
             <AlertCircle className="h-5 w-5 flex-shrink-0 text-destructive" />
             <div className="flex-1">
               <h3 className="font-semibold text-destructive">
-                Relationship Ended - Grace Period Active
+                Your Relationship is Ending Soon
               </h3>
               <p className="mt-1 text-sm text-destructive/90">
-                All posts and memories will be permanently deleted on{" "}
+                All your shared posts and memories will be gone forever on{" "}
                 <strong>
                   {new Date(permanentDeletionAt).toLocaleString(undefined, {
                     dateStyle: "full",
                     timeStyle: "short",
                   })}
                 </strong>
-                . You have until then to cancel the deletion and restore your
-                relationship.
+                . You can still save everything by resuming before then.
               </p>
               <Button
                 onClick={handleResumeOrAccept}
@@ -145,10 +144,10 @@ export const GracePeriodBanner = ({
             <AlertCircle className="h-5 w-5 flex-shrink-0 text-primary" />
             <div className="flex-1">
               <h3 className="font-semibold text-foreground">
-                Resume Request Sent
+                Waiting for {partnerName}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                You requested to resume the relationship on{" "}
+                You sent a request to resume on{" "}
                 <strong>
                   {new Date(resumeRequest!.requestedAt).toLocaleString(
                     undefined,
@@ -158,7 +157,8 @@ export const GracePeriodBanner = ({
                     },
                   )}
                 </strong>
-                . Waiting for {partnerName} to accept.
+                . They&apos;ll need to accept before your relationship is
+                restored.
               </p>
               <Button
                 onClick={handleCancel}
@@ -190,12 +190,12 @@ export const GracePeriodBanner = ({
           />
           <div className="flex-1">
             <h3 className="font-semibold text-foreground">
-              Partner Wants to Resume
+              {partnerName} Wants You Back
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              <strong>{partnerName}</strong> wants to resume the relationship.
-              If you accept, your relationship will be restored and all shared
-              posts will remain.
+              <strong>{partnerName}</strong> wants to get things back on track.
+              Accept to restore your relationship and keep all your shared
+              memories.
             </p>
             <Button
               onClick={handleResumeOrAccept}

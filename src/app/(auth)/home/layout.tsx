@@ -9,7 +9,7 @@ export default async function ProtectedLayout({
   const relationship = await getRelationship();
 
   if (!relationship) {
-    redirect("/pair");
+    redirect("/relationship");
   }
 
   return <>{children}</>;

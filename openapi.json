@@ -350,6 +350,17 @@
             "description": "Cursor for pagination (JSON-encoded object with createdAt and id)",
             "name": "cursor",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter posts by keyword search in text content (case-insensitive)",
+              "example": "birthday"
+            },
+            "required": false,
+            "description": "Filter posts by keyword search in text content (case-insensitive)",
+            "name": "keyword",
+            "in": "query"
           }
         ],
         "responses": {
@@ -613,6 +624,186 @@
           },
           "500": {
             "description": "Internal server error - Failed to cleanup deleted couples"
+          }
+        }
+      }
+    },
+    "/api/admin/attachments": {
+      "post": {
+        "tags": ["admin"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "object",
+                    "description": "The file to upload as an attachment"
+                  },
+                  "userId": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "User ID to create the attachment as",
+                    "example": 1
+                  }
+                },
+                "required": ["file", "userId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attachment created successfully on behalf of user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "number" },
+                        "filename": { "type": "string" }
+                      },
+                      "required": ["id", "filename"]
+                    }
+                  },
+                  "required": ["success", "data"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid file or missing userId"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing bearer token"
+          },
+          "404": { "description": "Not found - User not found" },
+          "500": {
+            "description": "Internal server error - Failed to create attachment"
+          }
+        }
+      }
+    },
+    "/api/admin/posts": {
+      "post": {
+        "tags": ["admin"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "User ID to create the post as",
+                    "example": 1
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Post text content",
+                    "example": "This is a post created by admin"
+                  },
+                  "attachmentIds": {
+                    "type": "array",
+                    "items": { "type": "integer", "exclusiveMinimum": 0 },
+                    "default": [],
+                    "description": "Array of attachment IDs to link to the post",
+                    "example": [1, 2, 3]
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Optional custom creation timestamp (ISO 8601 format). If not provided, uses current time.",
+                    "example": "2024-01-15T10:30:00.000Z"
+                  }
+                },
+                "required": ["userId", "text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post created successfully on behalf of user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "number" },
+                        "text": { "type": "string" },
+                        "createdBy": { "type": "number" },
+                        "user": {
+                          "type": ["object", "null"],
+                          "properties": {
+                            "id": { "type": "number" },
+                            "username": { "type": "string" },
+                            "displayName": { "type": ["string", "null"] },
+                            "avatar": { "type": ["string", "null"] }
+                          },
+                          "required": [
+                            "id",
+                            "username",
+                            "displayName",
+                            "avatar"
+                          ]
+                        },
+                        "createdAt": { "type": "string" },
+                        "updatedAt": { "type": ["string", "null"] },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "number" },
+                              "filename": { "type": "string" },
+                              "createdAt": { "type": "string" }
+                            },
+                            "required": ["id", "filename", "createdAt"]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "text",
+                        "createdBy",
+                        "user",
+                        "createdAt",
+                        "updatedAt",
+                        "attachments"
+                      ]
+                    }
+                  },
+                  "required": ["success", "data"]
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad request - Invalid input" },
+          "401": {
+            "description": "Unauthorized - Invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - User has no active relationship"
+          },
+          "404": {
+            "description": "Not found - User or attachment IDs not found"
+          },
+          "500": {
+            "description": "Internal server error - Failed to create post"
           }
         }
       }

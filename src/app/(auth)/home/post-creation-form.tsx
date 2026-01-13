@@ -3,10 +3,11 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Image as ImageIcon } from "lucide-react";
+import { Paperclip } from "lucide-react";
 import { EmojiInput } from "@/app/(auth)/home/emoji-input";
 import { ImagePreviewGallery } from "@/app/(auth)/home/image-preview-gallery";
 import { ImageEditorModal } from "@/app/(auth)/home/image-editor-modal";
+import { VideoPreviewModal } from "@/app/(auth)/home/video-preview-modal";
 import { useCreatePost } from "@/hooks/mutations/use-post-mutations";
 import { useUploadAttachment } from "@/hooks/mutations/use-attachment-mutations";
 import { handleApiError } from "@/lib/error-handler";
@@ -14,9 +15,12 @@ import { handleApiError } from "@/lib/error-handler";
 const MAX_CHARACTERS = 280;
 const MAX_ATTACHMENTS = 4;
 
+type FileType = "image" | "video" | "unknown";
+
 interface AttachmentPreview {
   file: File;
   preview?: string;
+  fileType: FileType;
   id?: number;
   filename?: string;
   uploading?: boolean;
@@ -30,14 +34,27 @@ export const PostCreationForm = () => {
   const [error, setError] = useState("");
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [previewingVideoIndex, setPreviewingVideoIndex] = useState<
+    number | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const createPostMutation = useCreatePost();
   const uploadAttachmentMutation = useUploadAttachment();
 
+  const getFileType = (file: File): FileType => {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type.startsWith("video/")) return "video";
+    return "unknown";
+  };
+
   const isImageFile = (file: File): boolean => {
     return file.type.startsWith("image/");
+  };
+
+  const isVideoFile = (file: File): boolean => {
+    return file.type.startsWith("video/");
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,10 +64,18 @@ export const PostCreationForm = () => {
     const newAttachments: AttachmentPreview[] = files
       .slice(0, MAX_ATTACHMENTS - attachments.length)
       .map((file) => {
-        const preview: AttachmentPreview = { file };
-        if (isImageFile(file)) {
+        const fileType = getFileType(file);
+
+        const preview: AttachmentPreview = {
+          file,
+          fileType,
+        };
+
+        // Create preview URL for images and videos
+        if (isImageFile(file) || isVideoFile(file)) {
           preview.preview = URL.createObjectURL(file);
         }
+
         return preview;
       });
 
@@ -192,15 +217,15 @@ export const PostCreationForm = () => {
   const canSubmit = text.trim().length > 0 && !isOverLimit && !isSubmitting;
 
   return (
-    <div className="border border-border rounded-[20px] p-6 shadow-warm bg-card">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="border border-border rounded-[20px] p-4 shadow-warm bg-card sm:p-6">
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
         <Textarea
           name="text"
           ref={textareaRef}
           placeholder="What's on your mind?"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="min-h-24 resize-none border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent! content-text placeholder:text-muted-foreground text-2xl!"
+          className="min-h-20 resize-none border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent! content-text placeholder:text-muted-foreground text-lg! sm:min-h-24 sm:text-2xl!"
           maxLength={MAX_CHARACTERS + 100}
         />
 
@@ -210,11 +235,12 @@ export const PostCreationForm = () => {
             attachments={attachments}
             onEdit={setEditingIndex}
             onRemove={removeAttachment}
+            onVideoClick={setPreviewingVideoIndex}
             disabled={isSubmitting}
           />
         )}
 
-        <div className="flex items-center gap-2 pt-4 border-t border-border">
+        <div className="flex items-center gap-1 pt-3 border-t border-border sm:gap-2 sm:pt-4">
           <div className="relative">
             <input
               ref={fileInputRef}
@@ -224,7 +250,7 @@ export const PostCreationForm = () => {
               disabled={isSubmitting || attachments.length >= MAX_ATTACHMENTS}
               className="hidden"
               id="file-input"
-              accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+              accept="image/*,video/*"
             />
             <label htmlFor="file-input">
               <Button
@@ -232,11 +258,11 @@ export const PostCreationForm = () => {
                 variant="ghost"
                 size="icon"
                 disabled={isSubmitting || attachments.length >= MAX_ATTACHMENTS}
-                className="cursor-pointer"
+                className="cursor-pointer h-9 w-9 sm:h-10 sm:w-10"
                 asChild
               >
-                <span title="Add image">
-                  <ImageIcon className="size-6" />
+                <span title="Add image or video">
+                  <Paperclip className="size-5 sm:size-6" />
                 </span>
               </Button>
             </label>
@@ -246,7 +272,7 @@ export const PostCreationForm = () => {
             disabled={isSubmitting}
           />
           <div
-            className={`text-sm ml-auto ${
+            className={`text-xs ml-auto sm:text-sm ${
               isOverLimit
                 ? "text-destructive"
                 : characterCount > MAX_CHARACTERS * 0.9
@@ -256,7 +282,11 @@ export const PostCreationForm = () => {
           >
             {characterCount}/{MAX_CHARACTERS}
           </div>
-          <Button type="submit" disabled={!canSubmit} className="min-w-20">
+          <Button
+            type="submit"
+            disabled={!canSubmit}
+            className="min-w-16 text-sm sm:min-w-20 sm:text-base"
+          >
             {isSubmitting ? "Posting..." : "Post"}
           </Button>
         </div>
@@ -274,6 +304,20 @@ export const PostCreationForm = () => {
           filename={attachments[editingIndex].file.name}
           onOpenChange={(open) => !open && setEditingIndex(null)}
           onSave={handleEditSave}
+        />
+      )}
+
+      {/* Video Preview Modal */}
+      {previewingVideoIndex !== null && attachments[previewingVideoIndex] && (
+        <VideoPreviewModal
+          open={previewingVideoIndex !== null}
+          videoUrl={
+            attachments[previewingVideoIndex].editedPreview ||
+            attachments[previewingVideoIndex].preview ||
+            URL.createObjectURL(attachments[previewingVideoIndex].file)
+          }
+          filename={attachments[previewingVideoIndex].file.name}
+          onOpenChange={(open) => !open && setPreviewingVideoIndex(null)}
         />
       )}
     </div>

@@ -1,9 +1,9 @@
 import { BaseService } from "./service";
 import { postTable, attachmentTable, userTable } from "@/database/schema";
-import { eq, inArray, desc, lt, or, and } from "drizzle-orm";
+import { eq, inArray, desc, lt, or, and, sql } from "drizzle-orm";
 import { USER_BASIC_INFO_SELECT } from "@/lib/constants";
 import { HTTPException } from "hono/http-exception";
-import { getUserActiveRelationship } from "@/database/relationship-helpers";
+import { getUserRelationship } from "@/database/relationship-helpers";
 
 export interface PostUser {
   id: number;
@@ -48,6 +48,38 @@ export interface PostsWithCursor {
 }
 
 /**
+ * Checks if a string contains CJK (Chinese, Japanese, Korean) characters
+ * CJK Unicode ranges:
+ * - \u4E00-\u9FFF: CJK Unified Ideographs
+ * - \u3400-\u4DBF: CJK Extension A
+ * - \uF900-\uFAFF: CJK Compatibility Ideographs
+ * - \u3040-\u309F: Hiragana
+ * - \u30A0-\u30FF: Katakana
+ *
+ * @param text - Text to check
+ * @returns True if text contains CJK characters
+ */
+function containsCJK(text: string): boolean {
+  return /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF\u3040-\u309F\u30A0-\u30FF]/.test(
+    text,
+  );
+}
+
+/**
+ * Escape FTS5 special characters in search query
+ * For trigram tokenizer, wrap query in quotes for phrase matching
+ *
+ * @param query - Raw search query from user
+ * @returns Escaped and quoted query safe for FTS5 MATCH with trigram tokenizer
+ */
+function escapeFts5Query(query: string): string {
+  // Escape any existing quotes by doubling them (FTS5 quote escape syntax)
+  const escaped = query.replace(/"/g, '""').trim();
+  // Wrap in quotes for phrase/substring matching with trigram tokenizer
+  return `"${escaped}"`;
+}
+
+/**
  * Post Service
  * Handles post CRUD operations including attachment management
  */
@@ -59,6 +91,7 @@ export class PostService extends BaseService {
    * @param userId - User ID creating the post
    * @param text - Post text content
    * @param attachmentIds - Array of attachment IDs to link to post
+   * @param createdAt - Optional custom creation timestamp (for admin/testing)
    * @returns Created post with user info and attachments
    * @throws NoActiveRelationshipError if user has no active relationship
    * @throws InvalidAttachmentsError if any attachment IDs are invalid
@@ -67,14 +100,12 @@ export class PostService extends BaseService {
     userId: number,
     text: string,
     attachmentIds: number[] = [],
+    createdAt?: Date,
   ): Promise<PostWithDetails> {
-    const now = new Date();
+    const now = createdAt || new Date();
 
     // Check if user has an active relationship
-    const activeRelationship = await getUserActiveRelationship(
-      this.ctx.db,
-      userId,
-    );
+    const activeRelationship = await getUserRelationship(this.ctx.db, userId);
 
     if (!activeRelationship) {
       throw new HTTPException(403, {
@@ -173,16 +204,15 @@ export class PostService extends BaseService {
     options?: {
       limit?: number;
       cursor?: { createdAt: string; id: number };
+      keyword?: string;
     },
   ): Promise<PostsWithCursor> {
     const limit = options?.limit ?? 20;
     const cursor = options?.cursor;
+    const keyword = options?.keyword;
 
     // Get user's active relationship
-    const activeRelationship = await getUserActiveRelationship(
-      this.ctx.db,
-      userId,
-    );
+    const activeRelationship = await getUserRelationship(this.ctx.db, userId);
 
     if (!activeRelationship) {
       // No relationship - return empty posts
@@ -200,6 +230,26 @@ export class PostService extends BaseService {
         )
       : undefined;
 
+    // Build keyword search condition
+    // Use LIKE for CJK (Chinese/Japanese/Korean) text since FTS5 trigram tokenizer
+    // doesn't properly handle multi-byte UTF-8 characters
+    // Use FTS5 for other text (English, etc.) for better performance
+    const keywordCondition = keyword
+      ? containsCJK(keyword)
+        ? sql`${postTable.text} LIKE ${"%" + keyword + "%"}`
+        : sql`${postTable.id} IN (
+            SELECT rowid FROM posts_fts
+            WHERE posts_fts MATCH ${escapeFts5Query(keyword)}
+          )`
+      : undefined;
+
+    // Combine all conditions
+    const whereConditions = [
+      eq(postTable.relationshipId, activeRelationship.id),
+      cursorCondition,
+      keywordCondition,
+    ].filter(Boolean);
+
     // Fetch relationship posts with user information
     // Query limit + 1 to determine if there's a next page
     const postsWithUsers = await this.ctx.db
@@ -209,14 +259,7 @@ export class PostService extends BaseService {
       })
       .from(postTable)
       .leftJoin(userTable, eq(postTable.createdBy, userTable.id))
-      .where(
-        cursorCondition
-          ? and(
-              eq(postTable.relationshipId, activeRelationship.id),
-              cursorCondition,
-            )
-          : eq(postTable.relationshipId, activeRelationship.id),
-      )
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(desc(postTable.createdAt), desc(postTable.id))
       .limit(limit + 1);
 
@@ -296,10 +339,7 @@ export class PostService extends BaseService {
    */
   async deletePost(userId: number, postId: number): Promise<void> {
     // Get user's active relationship
-    const activeRelationship = await getUserActiveRelationship(
-      this.ctx.db,
-      userId,
-    );
+    const userRelationship = await getUserRelationship(this.ctx.db, userId);
 
     // Check if post exists and belongs to user
     const [post] = await this.ctx.db
@@ -322,7 +362,7 @@ export class PostService extends BaseService {
     }
 
     // Verify post belongs to user's current active relationship
-    if (activeRelationship && post.relationshipId !== activeRelationship.id) {
+    if (userRelationship && post.relationshipId !== userRelationship.id) {
       throw new HTTPException(403, {
         message: "Post does not belong to your current relationship",
       });

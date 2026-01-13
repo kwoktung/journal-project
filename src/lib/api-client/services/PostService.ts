@@ -51,12 +51,14 @@ export class PostService {
     /**
      * @param limit Number of posts to return per page
      * @param cursor Cursor for pagination (JSON-encoded object with createdAt and id)
+     * @param keyword Filter posts by keyword search in text content (case-insensitive)
      * @returns any Posts retrieved successfully
      * @throws ApiError
      */
     public getApiPosts(
         limit: number = 20,
         cursor?: string,
+        keyword?: string,
     ): CancelablePromise<{
         posts: Array<{
             id: number;
@@ -83,6 +85,7 @@ export class PostService {
             query: {
                 'limit': limit,
                 'cursor': cursor,
+                'keyword': keyword,
             },
             errors: {
                 401: `Unauthorized - Authentication required`,

@@ -20,4 +20,8 @@ echo "📄 Found migration file: $LATEST_MIGRATION"
 echo "📋 Copying custom triggers..."
 cat src/database/custom-migrations/relationship-triggers.sql >> "$LATEST_MIGRATION"
 
+echo "📋 Copying FTS5 setup..."
+echo "" >> "$LATEST_MIGRATION"
+cat src/database/custom-migrations/fts5-posts.sql >> "$LATEST_MIGRATION"
+
 echo "✅ Custom migrations added to: $LATEST_MIGRATION"

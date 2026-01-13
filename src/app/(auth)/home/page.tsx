@@ -1,30 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { List } from "lucide-react";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PostCreationForm } from "./post-creation-form";
 import { PostsFeed } from "./posts-feed";
 import { GracePeriodBanner } from "./grace-period-banner";
+import { useDebounce } from "@/hooks";
 import { usePosts } from "@/hooks/queries/use-posts";
 import { useRelationship } from "@/hooks/queries/use-relationship";
 import { useSession } from "@/hooks/queries/use-auth";
 import { useDeletePost } from "@/hooks/mutations/use-post-mutations";
 import { handleApiError } from "@/lib/error-handler";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { getUserInitials } from "@/lib/format/user";
 
 const Dashboard = () => {
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+
   const {
     data,
     isLoading: loading,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-  } = usePosts();
+  } = usePosts(debouncedSearch || undefined);
   const { data: relationshipData } = useRelationship();
   const { data: currentUser } = useSession();
   const deletePostMutation = useDeletePost();
@@ -68,37 +70,7 @@ const Dashboard = () => {
     <>
       <ConfirmDialog />
       <div className="min-h-screen bg-background">
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3">
-                <div className="relative flex h-14 w-20 items-center">
-                  <Avatar className="absolute left-0 z-10 h-12 w-12 border-2 border-background shadow-md">
-                    <AvatarImage src={currentUser?.avatar || undefined} />
-                    <AvatarFallback className="bg-pink-400 text-white text-2xl">
-                      {getUserInitials(currentUser)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {partner && (
-                    <Avatar className="absolute left-8 z-0 h-12 w-12 border-2 border-background shadow-md">
-                      <AvatarImage src={partner.avatar || undefined} />
-                      <AvatarFallback className="bg-blue-500 text-white text-2xl">
-                        {getUserInitials(partner)}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href="/settings">
-                <Button variant="ghost" size="icon" title="Settings">
-                  <List className="size-6" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-
+        <div className="mx-auto max-w-3xl px-3 py-4 sm:px-4 sm:py-6">
           {/* Grace Period Banner */}
           {isPendingDeletion && permanentDeletionAt && (
             <GracePeriodBanner
@@ -113,7 +85,31 @@ const Dashboard = () => {
           )}
 
           {!isPendingDeletion && <PostCreationForm />}
-          <Separator className="my-6" />
+          <Separator className="my-4 sm:my-6" />
+
+          {/* Search Bar */}
+          <div className="mb-4 sm:mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground sm:left-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+              <Input
+                type="text"
+                placeholder="Search posts..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="h-12 rounded-[20px] shadow-warm pl-10 pr-10 text-base placeholder:text-base sm:h-14 sm:pl-12 sm:pr-12 sm:text-xl sm:placeholder:text-xl md:text-2xl md:placeholder:text-2xl"
+              />
+              {searchInput && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSearchInput("")}
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 sm:right-2 sm:h-9 sm:w-9"
+                >
+                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                </Button>
+              )}
+            </div>
+          </div>
           <PostsFeed
             pages={data?.pages || []}
             loading={loading}
@@ -123,6 +119,7 @@ const Dashboard = () => {
             deletingPostId={deletingPostId}
             currentUserId={currentUser?.id}
             onDeletePost={handleDeletePost}
+            searchQuery={debouncedSearch}
           />
         </div>
       </div>

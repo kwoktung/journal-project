@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { Play } from "lucide-react";
 import { getFileType, getFilename } from "./attachment-utils";
 
 interface Attachment {
@@ -13,50 +14,82 @@ interface ImageGridProps {
   onImageClick?: (index: number) => void;
 }
 
-interface GridImageProps {
+interface GridMediaProps {
   uri: string;
   onClick?: () => void;
   className?: string;
   priority?: boolean;
 }
 
-const GridImage = ({
+const GridMedia = ({
   uri,
   onClick,
   className = "",
   priority = false,
-}: GridImageProps) => {
+}: GridMediaProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
-  const filename = getFilename(uri) || "Image";
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const filename = getFilename(uri) || "Media";
   const fileType = getFileType(filename);
 
-  if (fileType !== "image") {
-    return null;
+  // Render video with thumbnail and play button
+  if (fileType === "video") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`relative overflow-hidden bg-muted hover:opacity-95 transition-opacity group ${className}`}
+      >
+        {!videoLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
+          </div>
+        )}
+        <video
+          src={uri}
+          className="absolute inset-0 w-full h-full object-cover"
+          preload="metadata"
+          onLoadedData={() => setVideoLoaded(true)}
+        />
+        {/* Play button overlay */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+          <div className="p-3 rounded-full bg-black/60 group-hover:bg-black/80 transition-colors backdrop-blur-sm">
+            <Play className="size-6 text-white fill-white sm:size-8" />
+          </div>
+        </div>
+      </button>
+    );
   }
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`relative overflow-hidden bg-muted hover:opacity-95 transition-opacity ${className}`}
-    >
-      {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
-        </div>
-      )}
-      <Image
-        src={uri}
-        alt={filename}
-        fill
-        className="object-cover"
-        sizes="(max-width: 768px) 100vw, 600px"
-        priority={priority}
-        unoptimized
-        onLoad={() => setImageLoaded(true)}
-      />
-    </button>
-  );
+  // Render image
+  if (fileType === "image") {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`relative overflow-hidden bg-muted hover:opacity-95 transition-opacity ${className}`}
+      >
+        {!imageLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
+          </div>
+        )}
+        <Image
+          src={uri}
+          alt={filename}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 600px"
+          priority={priority}
+          unoptimized
+          onLoad={() => setImageLoaded(true)}
+        />
+      </button>
+    );
+  }
+
+  // Unknown file type - don't render
+  return null;
 };
 
 export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
@@ -74,7 +107,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
       <div className="mt-3 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[600px]">
         <div className="relative w-full aspect-video">
           <div className="relative w-full h-full">
-            <GridImage
+            <GridMedia
               uri={attachments[0].uri}
               onClick={() => handleClick(0)}
               className="w-full h-full"
@@ -90,13 +123,13 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   if (count === 2) {
     return (
       <div className="mt-3 grid grid-cols-2 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
-        <GridImage
+        <GridMedia
           uri={attachments[0].uri}
           onClick={() => handleClick(0)}
           className="aspect-[7/8]"
           priority
         />
-        <GridImage
+        <GridMedia
           uri={attachments[1].uri}
           onClick={() => handleClick(1)}
           className="aspect-[7/8]"
@@ -111,7 +144,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 flex gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px] aspect-[16/10]">
         <div className="flex-[2] min-w-0">
-          <GridImage
+          <GridMedia
             uri={attachments[0].uri}
             onClick={() => handleClick(0)}
             className="h-full w-full"
@@ -119,12 +152,12 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
           />
         </div>
         <div className="flex-1 min-w-0 flex flex-col gap-0">
-          <GridImage
+          <GridMedia
             uri={attachments[1].uri}
             onClick={() => handleClick(1)}
             className="flex-1 h-0 w-full"
           />
-          <GridImage
+          <GridMedia
             uri={attachments[2].uri}
             onClick={() => handleClick(2)}
             className="flex-1 h-0 w-full"
@@ -139,7 +172,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 grid grid-cols-2 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         {attachments.map((attachment, idx) => (
-          <GridImage
+          <GridMedia
             key={idx}
             uri={attachment.uri}
             onClick={() => handleClick(idx)}
@@ -157,7 +190,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
       <div className="mt-3 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         <div className="grid grid-cols-2 gap-0">
           {attachments.slice(0, 2).map((attachment, idx) => (
-            <GridImage
+            <GridMedia
               key={idx}
               uri={attachment.uri}
               onClick={() => handleClick(idx)}
@@ -168,7 +201,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
         </div>
         <div className="grid grid-cols-3 gap-0">
           {attachments.slice(2, 5).map((attachment, idx) => (
-            <GridImage
+            <GridMedia
               key={idx + 2}
               uri={attachment.uri}
               onClick={() => handleClick(idx + 2)}
@@ -185,7 +218,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 grid grid-cols-3 gap-0 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px]">
         {attachments.map((attachment, idx) => (
-          <GridImage
+          <GridMedia
             key={idx}
             uri={attachment.uri}
             onClick={() => handleClick(idx)}
@@ -202,7 +235,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 grid grid-cols-3 gap-0 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px]">
         {attachments.slice(0, 9).map((attachment, idx) => (
-          <GridImage
+          <GridMedia
             key={idx}
             uri={attachment.uri}
             onClick={() => handleClick(idx)}

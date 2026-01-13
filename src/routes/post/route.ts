@@ -49,6 +49,7 @@ postApp.openapi(queryPosts, async (c) => {
   const result = await services.post.getRelationshipPosts(session.userId, {
     limit: query.limit,
     cursor,
+    keyword: query.keyword,
   });
 
   return c.json(result, 200);

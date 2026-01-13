@@ -6,7 +6,7 @@ import {
   format,
   isSameYear,
   parseISO,
-  formatDistanceToNow,
+  formatDistanceToNowStrict,
 } from "date-fns";
 
 /**
@@ -23,7 +23,7 @@ import {
  */
 export const formatTimestamp = (dateString: string): string => {
   const date = parseISO(dateString);
-  return formatDistanceToNow(date);
+  return formatDistanceToNowStrict(date, { addSuffix: true });
 };
 
 /**
