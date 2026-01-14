@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Home, User, Heart } from "lucide-react";
+import Link from "next/link";
+import { Home, Heart } from "lucide-react";
 import { SidebarNavItem } from "./sidebar-nav-item";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "@/hooks/queries/use-auth";
@@ -9,7 +10,6 @@ import { getUserInitials } from "@/lib/format/user";
 
 const navItems = [
   { href: "/home", label: "Home", icon: Home },
-  { href: "/profile", label: "Profile", icon: User },
   { href: "/relationship", label: "Relationship", icon: Heart },
 ];
 
@@ -42,7 +42,10 @@ export const Sidebar = () => {
 
       {/* User Section */}
       {currentUser && (
-        <div className="mt-auto rounded-xl p-3 transition-colors hover:bg-sidebar-accent/50">
+        <Link
+          href="/profile"
+          className="mt-auto block rounded-xl p-3 transition-colors hover:bg-sidebar-accent/50"
+        >
           <div className="flex items-center gap-3">
             <Avatar className="size-10">
               <AvatarImage
@@ -65,7 +68,7 @@ export const Sidebar = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Link>
       )}
     </aside>
   );
