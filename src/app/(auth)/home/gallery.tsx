@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { VideoPlayer } from "@/components/video/video-player";
 import { getFileType, getFilename } from "./attachment-utils";
 
 export interface Attachment {
@@ -59,25 +60,14 @@ interface GalleryVideoProps {
 }
 
 const GalleryVideo = ({ uri, isActive }: GalleryVideoProps) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (!isActive && videoRef.current) {
-      videoRef.current.pause();
-    }
-  }, [isActive]);
-
   return (
-    <div className="flex items-center justify-center h-full w-full">
-      <video
-        ref={videoRef}
+    <div className="flex items-center justify-center h-full w-full bg-black">
+      <VideoPlayer
+        key={isActive ? "active" : "inactive"}
         src={uri}
-        controls
-        className="max-h-[90vh] max-w-full object-contain"
+        className="w-full h-full max-h-[90vh]"
         preload={isActive ? "auto" : "metadata"}
-      >
-        Your browser does not support video playback.
-      </video>
+      />
     </div>
   );
 };

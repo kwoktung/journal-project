@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
-import { X, Crop, Paperclip, Play } from "lucide-react";
+import { X, Crop, Paperclip } from "lucide-react";
+import { VideoThumbnail } from "@/components/video/video-thumbnail";
 
 type FileType = "image" | "video" | "unknown";
 
@@ -86,34 +87,19 @@ export function ImagePreviewGallery({
                       )}
                     </>
                   ) : isVideo && displayPreview ? (
-                    /* Video Preview with Play Button */
+                    /* Video Preview with Thumbnail */
                     <>
-                      <video
-                        src={displayPreview}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        preload="metadata"
+                      <VideoThumbnail
+                        videoUrl={displayPreview}
+                        onClick={
+                          onVideoClick && !attachment.uploading
+                            ? () => onVideoClick(index)
+                            : undefined
+                        }
+                        className="absolute inset-0 w-full h-full"
+                        showPlayButton={!attachment.uploading}
+                        ariaLabel="Preview video"
                       />
-                      {/* Play button overlay - clickable to preview */}
-                      {onVideoClick && !attachment.uploading && (
-                        <button
-                          type="button"
-                          onClick={() => onVideoClick(index)}
-                          disabled={disabled}
-                          className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group/play"
-                          aria-label="Preview video"
-                        >
-                          <div className="p-2 rounded-full bg-black/60 group-hover/play:bg-black/80 transition-colors backdrop-blur-sm">
-                            <Play className="size-5 text-white fill-white" />
-                          </div>
-                        </button>
-                      )}
-                      {!onVideoClick && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                          <div className="p-2 rounded-full bg-black/60 backdrop-blur-sm">
-                            <Play className="size-5 text-white fill-white" />
-                          </div>
-                        </div>
-                      )}
                       {attachment.uploading && (
                         <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
                           <div className="w-6 h-6 border-4 border-muted-foreground/20 border-t-foreground rounded-full animate-spin" />
