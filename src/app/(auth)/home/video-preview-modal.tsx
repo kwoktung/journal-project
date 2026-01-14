@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VideoPlayer } from "@/components/video/video-player";
 import { useMounted } from "@/hooks";
 
 interface VideoPreviewModalProps {
@@ -20,14 +21,6 @@ export function VideoPreviewModal({
   onOpenChange,
 }: VideoPreviewModalProps) {
   const mounted = useMounted();
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Pause video when modal closes
-  useEffect(() => {
-    if (!open && videoRef.current) {
-      videoRef.current.pause();
-    }
-  }, [open]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -88,17 +81,13 @@ export function VideoPreviewModal({
         </div>
 
         {/* Video Content */}
-        <div className="flex-1 flex items-center justify-center p-4 bg-background">
-          <video
-            ref={videoRef}
+        <div className="flex-1 flex items-center justify-center bg-black p-0 min-h-0 overflow-hidden">
+          <VideoPlayer
             src={videoUrl}
-            controls
             autoPlay
-            className="max-h-full max-w-full rounded-lg"
+            className="w-full h-full"
             preload="auto"
-          >
-            Your browser does not support video playback.
-          </video>
+          />
         </div>
 
         {/* Footer */}

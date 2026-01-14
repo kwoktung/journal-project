@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { Play } from "lucide-react";
+import { VideoThumbnail } from "@/components/video/video-thumbnail";
 import { getFileType, getFilename } from "./attachment-utils";
 
 interface Attachment {
@@ -28,36 +28,18 @@ const GridMedia = ({
   priority = false,
 }: GridMediaProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [videoLoaded, setVideoLoaded] = useState(false);
   const filename = getFilename(uri) || "Media";
   const fileType = getFileType(filename);
 
   // Render video with thumbnail and play button
   if (fileType === "video") {
     return (
-      <button
-        type="button"
+      <VideoThumbnail
+        videoUrl={uri}
         onClick={onClick}
-        className={`relative overflow-hidden bg-muted hover:opacity-95 transition-opacity group ${className}`}
-      >
-        {!videoLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
-          </div>
-        )}
-        <video
-          src={uri}
-          className="absolute inset-0 w-full h-full object-cover"
-          preload="metadata"
-          onLoadedData={() => setVideoLoaded(true)}
-        />
-        {/* Play button overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
-          <div className="p-3 rounded-full bg-black/60 group-hover:bg-black/80 transition-colors backdrop-blur-sm">
-            <Play className="size-6 text-white fill-white sm:size-8" />
-          </div>
-        </div>
-      </button>
+        className={`hover:opacity-95 transition-opacity ${className}`}
+        ariaLabel={`Play ${filename}`}
+      />
     );
   }
 
