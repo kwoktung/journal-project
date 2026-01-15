@@ -1,19 +1,32 @@
 import { z } from "zod";
 
-export const createPostRequestSchema = z.object({
-  text: z.string().min(1).openapi({
-    description: "Post text content",
-    example: "This is my post content",
-  }),
-  attachments: z
-    .array(z.number().int().positive())
-    .optional()
-    .default([])
-    .openapi({
-      description: "Array of upload tracking IDs to attach to the post",
-      example: [1, 2, 3],
+export const createPostRequestSchema = z
+  .object({
+    text: z.string().openapi({
+      description: "Post text content (can be empty if attachments provided)",
+      example: "This is my post content",
     }),
-});
+    attachments: z
+      .array(z.number().int().positive())
+      .optional()
+      .default([])
+      .openapi({
+        description: "Array of upload tracking IDs to attach to the post",
+        example: [1, 2, 3],
+      }),
+  })
+  .refine(
+    (data) => {
+      // At least one of text or attachments must be present
+      return (
+        data.text.length > 0 ||
+        (data.attachments && data.attachments.length > 0)
+      );
+    },
+    {
+      message: "Post must have either text content or at least one attachment",
+    },
+  );
 
 export const postAttachmentSchema = z.object({
   id: z.number(),
