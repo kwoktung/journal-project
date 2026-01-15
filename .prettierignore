@@ -3,3 +3,4 @@ build
 coverage
 src/lib/api-client/**
 cloudflare-env.d.ts
+src/database/migrations/**

@@ -98,7 +98,7 @@ export const relationshipTable = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     user1Id: integer("user1_id").notNull(),
     user2Id: integer("user2_id").notNull(),
-    status: text("status").notNull(), // 'active' | 'pending_deletion'
+    status: text("status", { enum: ["active", "pending_deletion"] }).notNull(),
     startDate: integer("start_date", {
       mode: "timestamp",
     }),

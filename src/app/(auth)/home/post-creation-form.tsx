@@ -150,7 +150,11 @@ export const PostCreationForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || text.length > MAX_CHARACTERS) {
+    // Require at least text or attachments, but not both empty
+    if (
+      (text.trim().length === 0 && attachments.length === 0) ||
+      text.length > MAX_CHARACTERS
+    ) {
       return;
     }
 
@@ -214,7 +218,10 @@ export const PostCreationForm = () => {
   const isOverLimit = characterCount > MAX_CHARACTERS;
   const isSubmitting =
     createPostMutation.isPending || uploadAttachmentMutation.isPending;
-  const canSubmit = text.trim().length > 0 && !isOverLimit && !isSubmitting;
+  const canSubmit =
+    (text.trim().length > 0 || attachments.length > 0) &&
+    !isOverLimit &&
+    !isSubmitting;
 
   return (
     <div className="border border-border rounded-[20px] p-4 shadow-warm bg-card sm:p-6">
