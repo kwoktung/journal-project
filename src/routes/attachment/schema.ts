@@ -10,7 +10,7 @@ export const getAttachmentParamsSchema = z.object({
 
 export const createAttachmentRequestSchema = z.object({
   file: z.instanceof(File).openapi({
-    description: "The file to upload as an attachment",
+    description: "The file to upload as an attachment (max size: 50MB)",
     type: "object",
   }),
   thumbHash: z.string().optional().openapi({

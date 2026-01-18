@@ -52,7 +52,8 @@ export const createAttachment = createRoute({
       },
     },
     400: {
-      description: "Bad request - Invalid file or missing file",
+      description:
+        "Bad request - Invalid file, missing file, or file size exceeds 50MB",
     },
     401: {
       description: "Unauthorized - Authentication required",
