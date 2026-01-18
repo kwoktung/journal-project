@@ -23,16 +23,17 @@ Added video-specific functions:
 // Extract frame from video at specified time
 async function extractVideoFrame(
   file: File,
-  timeInSeconds: number = 0.5
-): Promise<ImageData | null>
+  timeInSeconds: number = 0.5,
+): Promise<ImageData | null>;
 
 // Generate thumbHash from video file (extracts frame at 0.5s)
 export async function generateThumbHashForVideo(
-  file: File
-): Promise<string | null>
+  file: File,
+): Promise<string | null>;
 ```
 
 **How it works:**
+
 1. Creates video element from File object
 2. Seeks to 0.5 seconds (or video start if shorter)
 3. Draws video frame to canvas
@@ -57,7 +58,7 @@ export function useUploadAttachment() {
       if (file.type.startsWith("image/")) {
         thumbHash = await generateThumbHashForImage(file);
       } else if (file.type.startsWith("video/")) {
-        thumbHash = await generateThumbHashForVideo(file);  // NEW
+        thumbHash = await generateThumbHashForVideo(file); // NEW
       }
 
       const data = await apiClient.attachment.postApiAttachment({
@@ -77,19 +78,22 @@ export function useUploadAttachment() {
 Added thumbHash support:
 
 **New Props:**
+
 ```typescript
 interface VideoThumbnailProps {
   videoUrl: string;
-  thumbHash?: string | null;  // NEW - optional blur placeholder
+  thumbHash?: string | null; // NEW - optional blur placeholder
   // ... existing props
 }
 ```
 
 **Loading State Enhancement:**
+
 - **Before:** Shows spinner while extracting thumbnail
 - **After:** Shows instant blur preview from thumbHash (if available)
 
 **Behavior:**
+
 1. **Instant:** thumbHash blur placeholder appears immediately
 2. **Background:** Full thumbnail extraction continues (for duration badge)
 3. **Transition:** Smooth fade from blur to full thumbnail
@@ -115,30 +119,30 @@ Updated to pass thumbHash to VideoThumbnail:
 
 ### Video Frame Extraction
 
-| Property | Value |
-|----------|-------|
-| Frame Time | 0.5 seconds (or start if video < 0.5s) |
-| Extraction Method | HTML5 Video + Canvas API |
-| Processing Time | ~100-200ms per video |
-| Fallback | Video icon if extraction fails |
+| Property          | Value                                  |
+| ----------------- | -------------------------------------- |
+| Frame Time        | 0.5 seconds (or start if video < 0.5s) |
+| Extraction Method | HTML5 Video + Canvas API               |
+| Processing Time   | ~100-200ms per video                   |
+| Fallback          | Video icon if extraction fails         |
 
 ### ThumbHash Generation
 
-| Property | Value |
-|----------|-------|
-| Source | Video frame at 0.5s |
-| Thumbnail Size | 20×20 pixels |
-| Storage Size | ~25 bytes (base64) |
-| Format | Base64-encoded Uint8Array |
+| Property       | Value                     |
+| -------------- | ------------------------- |
+| Source         | Video frame at 0.5s       |
+| Thumbnail Size | 20×20 pixels              |
+| Storage Size   | ~25 bytes (base64)        |
+| Format         | Base64-encoded Uint8Array |
 
 ### Performance Impact
 
-| Metric | Before | After | Notes |
-|--------|--------|-------|-------|
-| **Upload Time** | Base | +100-200ms | One-time cost during upload |
-| **Display Time** | 200-500ms (extraction) | <0.1s (blur) | Instant blur, extraction continues |
-| **Perceived Performance** | Spinner → Thumbnail | Blur → Thumbnail | 2-3x faster perceived |
-| **Database Overhead** | 0 bytes | ~25 bytes/video | Same as images |
+| Metric                    | Before                 | After            | Notes                              |
+| ------------------------- | ---------------------- | ---------------- | ---------------------------------- |
+| **Upload Time**           | Base                   | +100-200ms       | One-time cost during upload        |
+| **Display Time**          | 200-500ms (extraction) | <0.1s (blur)     | Instant blur, extraction continues |
+| **Perceived Performance** | Spinner → Thumbnail    | Blur → Thumbnail | 2-3x faster perceived              |
+| **Database Overhead**     | 0 bytes                | ~25 bytes/video  | Same as images                     |
 
 ---
 
@@ -165,12 +169,15 @@ Updated to pass thumbHash to VideoThumbnail:
 ### Modified Files
 
 **Utilities:**
+
 - `src/lib/thumbhash.ts` - Added video frame extraction + thumbHash generation
 
 **Upload Flow:**
+
 - `src/hooks/mutations/use-attachment-mutations.ts` - Generate thumbHash for videos
 
 **Display Components:**
+
 - `src/components/video/video-thumbnail.tsx` - Use thumbHash blur placeholder
 - `src/app/(auth)/home/image-grid.tsx` - Pass thumbHash to VideoThumbnail
 
@@ -179,17 +186,20 @@ Updated to pass thumbHash to VideoThumbnail:
 ## Browser Compatibility
 
 **Required APIs:**
+
 - `<video>` element with `.currentTime` seeking
 - `Canvas.getContext('2d')`
 - `OffscreenCanvas` (for thumbHash generation)
 
 **Supported Browsers:**
+
 - Chrome 69+
 - Firefox 105+
 - Safari 16.4+
 - Edge 79+
 
 **Graceful Degradation:**
+
 - If thumbHash unavailable → Shows spinner (existing behavior)
 - If frame extraction fails → Shows video icon placeholder
 
@@ -208,12 +218,14 @@ Updated to pass thumbHash to VideoThumbnail:
 ## Testing
 
 ### Type Checking
+
 ```bash
 ✅ yarn lint - PASSED
 ✅ TypeScript compilation - PASSED
 ```
 
 ### Manual Testing Checklist
+
 - [ ] Upload new video - thumbHash generated from 0.5s frame
 - [ ] View post with video - instant blur placeholder appears
 - [ ] Blur transitions to full thumbnail - smooth fade
@@ -224,6 +236,7 @@ Updated to pass thumbHash to VideoThumbnail:
 - [ ] Existing videos without thumbHash - show spinner (backward compatible)
 
 ### Database Verification
+
 ```sql
 -- Check thumbHash was stored for videos
 SELECT id, filename, thumb_hash
@@ -261,14 +274,14 @@ await uploadAttachment(videoFile, thumbHash);
 
 ## Comparison: Image vs Video ThumbHash
 
-| Aspect | Images | Videos |
-|--------|--------|--------|
-| **Source** | Image bitmap | Video frame at 0.5s |
-| **Generation Time** | ~10ms | ~100-200ms |
-| **Size** | ~25 bytes | ~25 bytes |
-| **Quality** | Full image | Single frame |
-| **Additional Info** | None | Duration badge (from full extraction) |
-| **Fallback** | Spinner | Video icon |
+| Aspect              | Images       | Videos                                |
+| ------------------- | ------------ | ------------------------------------- |
+| **Source**          | Image bitmap | Video frame at 0.5s                   |
+| **Generation Time** | ~10ms        | ~100-200ms                            |
+| **Size**            | ~25 bytes    | ~25 bytes                             |
+| **Quality**         | Full image   | Single frame                          |
+| **Additional Info** | None         | Duration badge (from full extraction) |
+| **Fallback**        | Spinner      | Video icon                            |
 
 ---
 
@@ -298,23 +311,27 @@ await uploadAttachment(videoFile, thumbHash);
 ## Troubleshooting
 
 ### ThumbHash not appearing for videos
+
 1. Check if video upload completed successfully
 2. Verify thumbHash was generated: Check browser console during upload
 3. Check database: `SELECT thumb_hash FROM attachments WHERE filename LIKE '%.mp4';`
 4. Ensure VideoThumbnail receives thumbHash prop
 
 ### "Failed to extract video frame" error
+
 1. Check browser compatibility (need video seeking support)
 2. Verify video file is valid and playable
 3. Check video format (MP4 recommended for best compatibility)
 4. Try shorter videos (< 0.5s videos use frame at start)
 
 ### Blur placeholder looks wrong for videos
+
 1. ThumbHash extracts from 0.5s - if that's a black frame, blur will be dark
 2. Consider using a different frame time for better representation
 3. Full thumbnail extraction still works (with duration badge)
 
 ### Upload taking too long
+
 1. Video thumbHash generation adds ~100-200ms
 2. For very large videos, consider showing progress indicator
 3. Frame extraction runs client-side, varies by device performance
