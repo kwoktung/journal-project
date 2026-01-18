@@ -15,6 +15,13 @@
       "when": 1768389544388,
       "tag": "0001_kind_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1768739359713,
+      "tag": "0002_daffy_lord_hawal",
+      "breakpoints": true
     }
   ]
 }

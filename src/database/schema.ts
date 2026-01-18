@@ -33,6 +33,7 @@ export const attachmentTable = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     filename: text("filename").notNull(),
     postId: integer("post_id"),
+    thumbHash: text("thumb_hash"),
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
     ),

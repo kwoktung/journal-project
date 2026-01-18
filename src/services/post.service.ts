@@ -15,11 +15,13 @@ export interface PostUser {
 export interface PostAttachment {
   id: number;
   filename: string;
+  thumbHash: string | null;
   createdAt: string;
 }
 
 export interface PostAttachmentUri {
   uri: string;
+  thumbHash: string | null;
 }
 
 export interface PostWithDetails {
@@ -186,6 +188,7 @@ export class PostService extends BaseService {
       attachments: postAttachments.map((att) => ({
         id: att.id,
         filename: att.filename,
+        thumbHash: att.thumbHash,
         createdAt: att.createdAt?.toISOString() || now.toISOString(),
       })),
     };
@@ -322,6 +325,7 @@ export class PostService extends BaseService {
       updatedAt: post.updatedAt?.toISOString() || null,
       attachments: (attachmentsByPostId[post.id] || []).map((att) => ({
         uri: `/attachment/${att.filename}`,
+        thumbHash: att.thumbHash,
       })),
     }));
 

@@ -4,9 +4,11 @@ import Image from "next/image";
 import { useState } from "react";
 import { VideoThumbnail } from "@/components/video/video-thumbnail";
 import { getFileType, getFilename } from "./attachment-utils";
+import { thumbHashToDataUrl } from "@/lib/thumbhash";
 
 interface Attachment {
   uri: string;
+  thumbHash?: string | null;
 }
 
 interface ImageGridProps {
@@ -16,6 +18,7 @@ interface ImageGridProps {
 
 interface GridMediaProps {
   uri: string;
+  thumbHash?: string | null;
   onClick?: () => void;
   className?: string;
   priority?: boolean;
@@ -23,6 +26,7 @@ interface GridMediaProps {
 
 const GridMedia = ({
   uri,
+  thumbHash,
   onClick,
   className = "",
   priority = false,
@@ -36,6 +40,7 @@ const GridMedia = ({
     return (
       <VideoThumbnail
         videoUrl={uri}
+        thumbHash={thumbHash}
         onClick={onClick}
         className={`hover:opacity-95 transition-opacity ${className}`}
         ariaLabel={`Play ${filename}`}
@@ -45,13 +50,16 @@ const GridMedia = ({
 
   // Render image
   if (fileType === "image") {
+    // Generate blur placeholder from thumbHash if available
+    const blurDataURL = thumbHash ? thumbHashToDataUrl(thumbHash) : undefined;
+
     return (
       <button
         type="button"
         onClick={onClick}
         className={`relative overflow-hidden bg-muted hover:opacity-95 transition-opacity ${className}`}
       >
-        {!imageLoaded && (
+        {!imageLoaded && !blurDataURL && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-6 h-6 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
           </div>
@@ -63,7 +71,8 @@ const GridMedia = ({
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 600px"
           priority={priority}
-          unoptimized
+          placeholder={blurDataURL ? "blur" : "empty"}
+          blurDataURL={blurDataURL}
           onLoad={() => setImageLoaded(true)}
         />
       </button>
@@ -91,6 +100,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
           <div className="relative w-full h-full">
             <GridMedia
               uri={attachments[0].uri}
+              thumbHash={attachments[0].thumbHash}
               onClick={() => handleClick(0)}
               className="w-full h-full"
               priority
@@ -107,12 +117,14 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
       <div className="mt-3 grid grid-cols-2 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         <GridMedia
           uri={attachments[0].uri}
+          thumbHash={attachments[0].thumbHash}
           onClick={() => handleClick(0)}
           className="aspect-[7/8]"
           priority
         />
         <GridMedia
           uri={attachments[1].uri}
+          thumbHash={attachments[1].thumbHash}
           onClick={() => handleClick(1)}
           className="aspect-[7/8]"
           priority
@@ -128,6 +140,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
         <div className="flex-[2] min-w-0">
           <GridMedia
             uri={attachments[0].uri}
+            thumbHash={attachments[0].thumbHash}
             onClick={() => handleClick(0)}
             className="h-full w-full"
             priority
@@ -136,11 +149,13 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
         <div className="flex-1 min-w-0 flex flex-col gap-0">
           <GridMedia
             uri={attachments[1].uri}
+            thumbHash={attachments[1].thumbHash}
             onClick={() => handleClick(1)}
             className="flex-1 h-0 w-full"
           />
           <GridMedia
             uri={attachments[2].uri}
+            thumbHash={attachments[2].thumbHash}
             onClick={() => handleClick(2)}
             className="flex-1 h-0 w-full"
           />
@@ -157,6 +172,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
           <GridMedia
             key={idx}
             uri={attachment.uri}
+            thumbHash={attachment.thumbHash}
             onClick={() => handleClick(idx)}
             className="aspect-square"
             priority={idx === 0}
@@ -175,6 +191,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
             <GridMedia
               key={idx}
               uri={attachment.uri}
+              thumbHash={attachment.thumbHash}
               onClick={() => handleClick(idx)}
               className="aspect-square"
               priority={idx === 0}
@@ -186,6 +203,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
             <GridMedia
               key={idx + 2}
               uri={attachment.uri}
+              thumbHash={attachment.thumbHash}
               onClick={() => handleClick(idx + 2)}
               className="aspect-square"
             />
@@ -203,6 +221,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
           <GridMedia
             key={idx}
             uri={attachment.uri}
+            thumbHash={attachment.thumbHash}
             onClick={() => handleClick(idx)}
             className="aspect-square"
             priority={idx === 0}
@@ -220,6 +239,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
           <GridMedia
             key={idx}
             uri={attachment.uri}
+            thumbHash={attachment.thumbHash}
             onClick={() => handleClick(idx)}
             className="aspect-square"
             priority={idx === 0}

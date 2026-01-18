@@ -17,12 +17,17 @@ export class AttachmentService {
              * The file to upload as an attachment
              */
             file: Record<string, any>;
+            /**
+             * Optional base64-encoded thumbhash for blur placeholder (~25 bytes)
+             */
+            thumbHash?: string;
         },
     ): CancelablePromise<{
         success: boolean;
         data: {
             id: number;
             filename: string;
+            thumbHash: string | null;
         };
     }> {
         return this.httpRequest.request({

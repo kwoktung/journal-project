@@ -13,11 +13,17 @@ export const createAttachmentRequestSchema = z.object({
     description: "The file to upload as an attachment",
     type: "object",
   }),
+  thumbHash: z.string().optional().openapi({
+    description:
+      "Optional base64-encoded thumbhash for blur placeholder (~25 bytes)",
+    example: "1QcSHQRnh493V4dIh4eXh4MG",
+  }),
 });
 
 export const createAttachmentDataSchema = z.object({
   id: z.number(),
   filename: z.string(),
+  thumbHash: z.string().nullable(),
 });
 
 export const createAttachmentResponseSchema = createSuccessResponse(
