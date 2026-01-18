@@ -55,11 +55,22 @@ export class UserService extends BaseService {
    * @param avatarFilename - New avatar filename (can be null to remove avatar)
    * @returns Updated user information
    * @throws NotFoundError if user not found
+   * @throws BadRequestError if avatar file doesn't exist in R2
    */
   async updateAvatar(
     userId: number,
     avatarFilename: string | null,
   ): Promise<UserInfo> {
+    // Validate that the avatar file exists in R2 storage if filename is provided
+    if (avatarFilename !== null) {
+      const fileExists = await this.ctx.env.R2.get(avatarFilename);
+      if (!fileExists) {
+        throw new HTTPException(400, {
+          message: "Avatar file not found in storage",
+        });
+      }
+    }
+
     const now = new Date();
 
     const [updatedUser] = await this.ctx.db

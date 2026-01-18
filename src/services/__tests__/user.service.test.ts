@@ -84,7 +84,7 @@ describe("UserService", () => {
   describe("updateAvatar", () => {
     it("should update user avatar successfully", async () => {
       const userId = 1;
-      const newAvatar = "https://example.com/new-avatar.jpg";
+      const newAvatar = "1234567890-abc-123.jpg";
       const updatedUser = {
         id: userId,
         email: "test@example.com",
@@ -92,6 +92,14 @@ describe("UserService", () => {
         displayName: "Test User",
         avatar: newAvatar,
       };
+
+      // Mock R2.get to simulate file exists
+      mockCtx.env.R2.get = vi.fn().mockResolvedValue({
+        body: new ReadableStream(),
+        httpMetadata: { contentType: "image/jpeg" },
+        size: 1024,
+        httpEtag: "test-etag",
+      });
 
       mockCtx.db.update = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -105,6 +113,7 @@ describe("UserService", () => {
 
       expect(result).toBeDefined();
       expect(result.avatar).toBe(newAvatar);
+      expect(mockCtx.env.R2.get).toHaveBeenCalledWith(newAvatar);
       expect(mockCtx.db.update).toHaveBeenCalled();
     });
 
@@ -118,6 +127,9 @@ describe("UserService", () => {
         avatar: null,
       };
 
+      // Mock R2.get as a spy to verify it's not called
+      mockCtx.env.R2.get = vi.fn();
+
       mockCtx.db.update = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -130,10 +142,38 @@ describe("UserService", () => {
 
       expect(result).toBeDefined();
       expect(result.avatar).toBeNull();
+      // Should not check R2 when setting avatar to null
+      expect(mockCtx.env.R2.get).not.toHaveBeenCalled();
+    });
+
+    it("should throw HTTPException if avatar file not found in R2", async () => {
+      const userId = 1;
+      const avatarFilename = "nonexistent-file.jpg";
+
+      // Mock R2.get to simulate file doesn't exist
+      mockCtx.env.R2.get = vi.fn().mockResolvedValue(null);
+
+      await expect(
+        userService.updateAvatar(userId, avatarFilename),
+      ).rejects.toThrow(HTTPException);
+      await expect(
+        userService.updateAvatar(userId, avatarFilename),
+      ).rejects.toThrow("Avatar file not found in storage");
+
+      expect(mockCtx.env.R2.get).toHaveBeenCalledWith(avatarFilename);
     });
 
     it("should throw HTTPException if user not found", async () => {
       const userId = 1;
+      const avatarFilename = "1234567890-abc-123.jpg";
+
+      // Mock R2.get to simulate file exists
+      mockCtx.env.R2.get = vi.fn().mockResolvedValue({
+        body: new ReadableStream(),
+        httpMetadata: { contentType: "image/jpeg" },
+        size: 1024,
+        httpEtag: "test-etag",
+      });
 
       mockCtx.db.update = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -144,7 +184,7 @@ describe("UserService", () => {
       });
 
       await expect(
-        userService.updateAvatar(userId, "https://example.com/avatar.jpg"),
+        userService.updateAvatar(userId, avatarFilename),
       ).rejects.toThrow(HTTPException);
     });
   });

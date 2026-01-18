@@ -14,12 +14,12 @@ import { AvatarEditor } from "./avatar-editor";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   validateImageFile,
-  getAvatarUrl,
   getUserInitials,
   createPreviewUrl,
   revokePreviewUrl,
   blobToFile,
 } from "./avatar-utils";
+import { getAvatarUrl } from "@/lib/avatar";
 import type { UserData } from "./types";
 
 interface ProfilePictureSectionProps {
