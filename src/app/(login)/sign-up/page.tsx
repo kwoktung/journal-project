@@ -201,6 +201,9 @@ export default function SignUp() {
                         <Input
                           type="email"
                           autoComplete="email"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck="false"
                           placeholder="Enter your email"
                           className="h-11"
                           {...field}
@@ -222,6 +225,9 @@ export default function SignUp() {
                         <Input
                           type="text"
                           autoComplete="username"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck="false"
                           placeholder="Choose a username"
                           className="h-11"
                           {...field}
