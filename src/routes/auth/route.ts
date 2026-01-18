@@ -6,8 +6,7 @@ import { userTable, postTable, attachmentTable } from "@/database/schema";
 import { getDatabase } from "@/database/client";
 import { HttpResponse } from "@/lib/response";
 import { setAuthCookies, deleteAuthCookies } from "@/lib/auth/session";
-import { deleteCookie, getCookie } from "hono/cookie";
-import { ACCESS_TOKEN_COOKIE_NAME } from "@/config/config";
+import { getCookie } from "hono/cookie";
 import { hashPassword } from "@/lib/auth";
 import { hasActiveRelationship } from "@/database/relationship-helpers";
 import {
@@ -46,7 +45,7 @@ authApp.openapi(signIn, async (c) => {
   }
 
   const context = getCloudflareContext({ async: false });
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const user = await services.auth.validateCredentials(login, password);
@@ -55,7 +54,7 @@ authApp.openapi(signIn, async (c) => {
     user.id,
   );
 
-  setAuthCookies(c, accessToken, refreshToken);
+  setAuthCookies(ctx, accessToken, refreshToken);
 
   return c.json({ token: accessToken, refreshToken });
 });
@@ -130,7 +129,7 @@ authApp.openapi(signUp, async (c) => {
   }
 
   const hashedPassword = await hashPassword(password);
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   if (inviteCode) {
@@ -158,7 +157,7 @@ authApp.openapi(signUp, async (c) => {
       newUser.id,
     );
 
-    setAuthCookies(c, accessToken, refreshToken);
+    setAuthCookies(ctx, accessToken, refreshToken);
 
     return c.json({ token: accessToken, refreshToken }, 201);
   }
@@ -177,22 +176,22 @@ authApp.openapi(signUp, async (c) => {
     newUser.id,
   );
 
-  setAuthCookies(c, accessToken, refreshToken);
+  setAuthCookies(ctx, accessToken, refreshToken);
 
   return c.json({ token: accessToken, refreshToken }, 201);
 });
 
 authApp.openapi(signOut, async (c) => {
   const context = getCloudflareContext({ async: false });
+  const ctx = createContext(context, c);
   const refreshTokenValue = getCookie(c, "refresh_token");
 
   if (refreshTokenValue) {
-    const ctx = createContext(context.env);
     const services = createServices(ctx);
     await services.auth.revokeRefreshToken(refreshTokenValue);
   }
 
-  deleteAuthCookies(c);
+  deleteAuthCookies(ctx);
 
   return c.json({ success: true });
 });
@@ -231,7 +230,8 @@ authApp.openapi(deleteAccount, async (c) => {
 
   await db.delete(userTable).where(eq(userTable.id, userId)).run();
 
-  deleteCookie(c, ACCESS_TOKEN_COOKIE_NAME, { path: "/" });
+  const ctx = createContext(context, c);
+  deleteAuthCookies(ctx);
 
   return c.json({ success: true });
 });
@@ -249,7 +249,7 @@ authApp.openapi(refreshToken, async (c) => {
     throw new HTTPException(401, { message: "Refresh token required" });
   }
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const tokens = await services.auth.refreshAuthTokens(refreshTokenValue);
@@ -260,7 +260,7 @@ authApp.openapi(refreshToken, async (c) => {
     });
   }
 
-  setAuthCookies(c, tokens.accessToken, tokens.refreshToken);
+  setAuthCookies(ctx, tokens.accessToken, tokens.refreshToken);
 
   return c.json({
     token: tokens.accessToken,

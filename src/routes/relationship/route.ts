@@ -32,7 +32,7 @@ const relationshipApp = new OpenAPIHono({
 relationshipApp.openapi(createInvite, async (c) => {
   const { session, context } = await requireAuth(c);
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const invitation = await services.invitation.createInvitation(session.userId);
@@ -51,7 +51,7 @@ relationshipApp.openapi(acceptInvite, async (c) => {
   const body = c.req.valid("json");
   const { inviteCode } = body;
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
   const db = getDatabase(context.env);
 
@@ -95,7 +95,7 @@ relationshipApp.openapi(acceptInvite, async (c) => {
 relationshipApp.openapi(getRelationship, async (c) => {
   const { session, context } = await requireAuth(c);
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const relationship = await services.relationship.getRelationshipWithPartner(
@@ -112,7 +112,7 @@ relationshipApp.openapi(getRelationship, async (c) => {
 relationshipApp.openapi(endRelationship, async (c) => {
   const { session, context } = await requireAuth(c);
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const result = await services.relationship.endRelationship(session.userId);
@@ -123,7 +123,7 @@ relationshipApp.openapi(endRelationship, async (c) => {
 relationshipApp.openapi(resumeRelationship, async (c) => {
   const { session, context } = await requireAuth(c);
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const result = await services.relationship.resumeRelationship(session.userId);
@@ -135,7 +135,7 @@ relationshipApp.openapi(resumeRelationship, async (c) => {
 relationshipApp.openapi(cancelResumeRequest, async (c) => {
   const { session, context } = await requireAuth(c);
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const result = await services.relationship.cancelResumeRequest(
@@ -148,7 +148,7 @@ relationshipApp.openapi(cancelResumeRequest, async (c) => {
 relationshipApp.openapi(getInviteCode, async (c) => {
   const { session, context } = await requireAuth(c);
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const inviteCode = await services.invitation.getOrCreateInvitation(
@@ -169,7 +169,7 @@ relationshipApp.openapi(updateStartDate, async (c) => {
   const body = c.req.valid("json");
   const { startDate } = body;
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const result = await services.relationship.updateRelationshipStartDate(

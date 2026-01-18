@@ -1,7 +1,5 @@
-import type { Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { eq } from "drizzle-orm";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   verifyJWT,
   isTokenExpired,
@@ -15,6 +13,7 @@ import {
 } from "@/config/config";
 import { getDatabase } from "@/database/client";
 import { refreshTokenTable } from "@/database/schema";
+import type { Context } from "@/lib/context";
 
 /**
  * Validates a refresh token and returns the payload if valid
@@ -79,12 +78,13 @@ export async function refreshAccessToken(
 /**
  * Extracts JWT from Authorization header (priority) or cookie (fallback)
  * If access token from cookie is expired, attempts to refresh using refresh token
- * Automatically gets database client from Cloudflare context if needed
  */
 export async function getSession(
-  c: Context,
-  secret: string,
+  ctx: Context,
 ): Promise<JWTPayload | null> {
+  const c = ctx.honoContext;
+  const secret = ctx.env.JWT_SECRET;
+
   // Priority 1: Authorization header
   const authHeader = c.req.header("Authorization");
   if (authHeader?.startsWith("Bearer ")) {
@@ -110,27 +110,23 @@ export async function getSession(
     // If token is expired or invalid, try to refresh using refresh token
     if (isTokenExpired(sessionToken) === true) {
       try {
-        // Get database client from Cloudflare context
-        const context = getCloudflareContext({ async: false });
-        const db = getDatabase(context.env);
         const refreshTokenValue = getCookie(c, REFRESH_TOKEN_COOKIE_NAME);
 
         if (refreshTokenValue) {
           const refreshResult = await refreshAccessToken(
             refreshTokenValue,
             secret,
-            db,
+            ctx.db,
           );
 
           if (refreshResult) {
             // Set new cookies with refreshed access token
-            setAuthCookies(c, refreshResult.accessToken, refreshTokenValue);
+            setAuthCookies(ctx, refreshResult.accessToken, refreshTokenValue);
             return refreshResult.payload;
           }
         }
       } catch {
-        // If Cloudflare context is not available (e.g., in Next.js pages),
-        // silently fail and return null
+        // If refresh fails, silently fail and return null
         return null;
       }
     }
@@ -143,20 +139,20 @@ export async function getSession(
  * Sets both access token and refresh token cookies
  */
 export function setAuthCookies(
-  c: Context,
+  ctx: Context,
   accessToken: string,
   refreshToken: string,
 ): void {
-  setCookie(c, ACCESS_TOKEN_COOKIE_NAME, accessToken, {
+  setCookie(ctx.honoContext, ACCESS_TOKEN_COOKIE_NAME, accessToken, {
     httpOnly: true,
-    secure: true,
+    secure: ctx.env.ENV === "DEV" ? false : true,
     sameSite: "Lax",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
   });
-  setCookie(c, REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+  setCookie(ctx.honoContext, REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
     httpOnly: true,
-    secure: true,
+    secure: ctx.env.ENV === "DEV" ? false : true,
     sameSite: "Lax",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
@@ -166,7 +162,7 @@ export function setAuthCookies(
 /**
  * Deletes both access token and refresh token cookies
  */
-export function deleteAuthCookies(c: Context): void {
-  deleteCookie(c, ACCESS_TOKEN_COOKIE_NAME, { path: "/" });
-  deleteCookie(c, REFRESH_TOKEN_COOKIE_NAME, { path: "/" });
+export function deleteAuthCookies(ctx: Context): void {
+  deleteCookie(ctx.honoContext, ACCESS_TOKEN_COOKIE_NAME, { path: "/" });
+  deleteCookie(ctx.honoContext, REFRESH_TOKEN_COOKIE_NAME, { path: "/" });
 }

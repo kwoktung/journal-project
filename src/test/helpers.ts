@@ -2,15 +2,17 @@ import { vi } from "vitest";
 import type { Context } from "@/lib/context";
 
 export function createMockContext(): Context {
+  const mockEnv = {
+    JWT_SECRET: "test-secret",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    DB: {} as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    R2: {} as any,
+    TURNSTILE_SECRET_KEY: "test-turnstile-key",
+  } as CloudflareEnv;
+
   return {
-    env: {
-      JWT_SECRET: "test-secret",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      DB: {} as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      R2: {} as any,
-      TURNSTILE_SECRET_KEY: "test-turnstile-key",
-    } as CloudflareEnv,
+    env: mockEnv,
     logger: {
       info: vi.fn(),
       error: vi.fn(),
@@ -45,5 +47,14 @@ export function createMockContext(): Context {
       update: vi.fn(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
+    cloudflareContext: {
+      env: mockEnv,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      cf: {} as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ctx: {} as any,
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    honoContext: {} as any,
   };
 }
