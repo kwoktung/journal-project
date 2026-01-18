@@ -154,7 +154,7 @@ export const ProfilePictureSection = ({ user }: ProfilePictureSectionProps) => {
     }
   };
 
-  const displayUrl = getAvatarUrl(user, editedPreview);
+  const displayUrl = getAvatarUrl(user?.avatar ?? null, editedPreview);
 
   const initials = getUserInitials(user);
   const hasEditedPreview = Boolean(editedPreview);

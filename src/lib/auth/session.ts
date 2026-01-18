@@ -79,9 +79,7 @@ export async function refreshAccessToken(
  * Extracts JWT from Authorization header (priority) or cookie (fallback)
  * If access token from cookie is expired, attempts to refresh using refresh token
  */
-export async function getSession(
-  ctx: Context,
-): Promise<JWTPayload | null> {
+export async function getSession(ctx: Context): Promise<JWTPayload | null> {
   const c = ctx.honoContext;
   const secret = ctx.env.JWT_SECRET;
 

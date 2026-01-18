@@ -52,20 +52,20 @@ export class UserService extends BaseService {
    * Updates user avatar
    *
    * @param userId - User ID to update
-   * @param avatarUrl - New avatar URL (can be null to remove avatar)
+   * @param avatarFilename - New avatar filename (can be null to remove avatar)
    * @returns Updated user information
    * @throws NotFoundError if user not found
    */
   async updateAvatar(
     userId: number,
-    avatarUrl: string | null,
+    avatarFilename: string | null,
   ): Promise<UserInfo> {
     const now = new Date();
 
     const [updatedUser] = await this.ctx.db
       .update(userTable)
       .set({
-        avatar: avatarUrl,
+        avatar: avatarFilename,
         updatedAt: now,
       })
       .where(eq(userTable.id, userId))

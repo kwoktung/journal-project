@@ -1,4 +1,5 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getAvatarUrl } from "../profile/avatar-utils";
 
 interface UserAvatarProps {
   user: {
@@ -19,7 +20,7 @@ export const UserAvatar = ({
     <Avatar className={className}>
       {user?.avatar && (
         <AvatarImage
-          src={user.avatar}
+          src={getAvatarUrl(user.avatar) ?? undefined}
           alt={user.displayName || user.username}
         />
       )}
