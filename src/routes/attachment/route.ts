@@ -24,6 +24,7 @@ attachmentApp.openapi(createAttachment, async (c) => {
 
   const formData = await c.req.formData();
   const file = formData.get("file") as File | null;
+  const thumbHash = formData.get("thumbHash") as string | null;
 
   const ctx = createContext(context, c);
   const services = createServices(ctx);
@@ -31,6 +32,7 @@ attachmentApp.openapi(createAttachment, async (c) => {
   const attachment = await services.attachment.uploadAttachment(
     file!,
     session.userId,
+    thumbHash,
   );
 
   return HttpResponse.created(c, attachment);

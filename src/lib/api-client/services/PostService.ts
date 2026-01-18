@@ -14,7 +14,7 @@ export class PostService {
     public postApiPosts(
         requestBody?: {
             /**
-             * Post text content
+             * Post text content (can be empty if attachments provided)
              */
             text: string;
             /**

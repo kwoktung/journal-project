@@ -5,12 +5,14 @@ import { HTTPException } from "hono/http-exception";
 export interface AttachmentRecord {
   id: number;
   filename: string;
+  thumbHash: string | null;
   createdAt: Date | null;
 }
 
 export interface UploadedAttachment {
   id: number;
   filename: string;
+  thumbHash: string | null;
 }
 
 export interface R2Object {
@@ -57,6 +59,7 @@ export class AttachmentService extends BaseService {
    *
    * @param file - File to upload
    * @param userId - User ID uploading the file
+   * @param thumbHash - Optional base64-encoded thumbhash for blur placeholder
    * @returns Uploaded attachment info
    * @throws ServiceError if file is missing or empty
    * @throws ServiceError if R2 upload fails
@@ -64,6 +67,7 @@ export class AttachmentService extends BaseService {
   async uploadAttachment(
     file: File,
     userId: number,
+    thumbHash?: string | null,
   ): Promise<UploadedAttachment> {
     // Validate file
     if (!file) {
@@ -101,6 +105,7 @@ export class AttachmentService extends BaseService {
       .insert(attachmentTable)
       .values({
         filename,
+        thumbHash: thumbHash || null,
         createdAt: now,
       })
       .returning();
@@ -108,6 +113,7 @@ export class AttachmentService extends BaseService {
     return {
       id: attachmentRecord.id,
       filename,
+      thumbHash: attachmentRecord.thumbHash,
     };
   }
 

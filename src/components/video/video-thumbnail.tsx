@@ -5,10 +5,13 @@ import {
   ThumbnailExtractionError,
 } from "@/lib/video/thumbnail-extractor";
 import { formatVideoDuration } from "@/lib/video/format-duration";
+import { thumbHashToDataUrl } from "@/lib/thumbhash";
 
 interface VideoThumbnailProps {
   /** Video URL to generate thumbnail from */
   videoUrl: string;
+  /** Optional thumbHash for instant blur placeholder */
+  thumbHash?: string | null;
   /** Additional CSS classes */
   className?: string;
   /** Show play button overlay (default: true) */
@@ -40,6 +43,7 @@ interface VideoThumbnailProps {
  */
 export function VideoThumbnail({
   videoUrl,
+  thumbHash,
   className = "",
   showPlayButton = true,
   onClick,
@@ -52,6 +56,9 @@ export function VideoThumbnail({
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(false);
+
+  // Generate blur placeholder from thumbHash if available
+  const blurDataURL = thumbHash ? thumbHashToDataUrl(thumbHash) : null;
 
   // Extract thumbnail when element comes into viewport
   useEffect(() => {
@@ -98,13 +105,31 @@ export function VideoThumbnail({
   // Common container classes
   const containerClasses = `relative overflow-hidden bg-muted ${className}`;
 
-  // Loading state
+  // Loading state - show blur placeholder if available, otherwise spinner
   if (isLoading) {
     return (
       <div ref={containerRef} className={containerClasses}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="size-6 sm:size-8 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
-        </div>
+        {blurDataURL ? (
+          <>
+            {/* Show blur placeholder while loading */}
+            <img
+              src={blurDataURL}
+              alt="Video thumbnail loading"
+              className="absolute inset-0 w-full h-full object-cover blur-sm scale-110"
+            />
+            {showPlayButton && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <div className="p-2 sm:p-3 rounded-full bg-black/60 backdrop-blur-sm">
+                  <Play className="size-5 sm:size-6 text-white fill-white" />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="size-6 sm:size-8 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
+          </div>
+        )}
       </div>
     );
   }
