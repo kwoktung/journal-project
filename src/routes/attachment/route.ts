@@ -26,6 +26,15 @@ attachmentApp.openapi(createAttachment, async (c) => {
   const file = formData.get("file") as File | null;
   const thumbHash = formData.get("thumbHash") as string | null;
 
+  // Validate file size (max 50MB)
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+  if (file && file.size > MAX_FILE_SIZE) {
+    return HttpResponse.error(c, {
+      message: "File size exceeds the maximum limit of 50MB",
+      status: 400,
+    });
+  }
+
   const ctx = createContext(context, c);
   const services = createServices(ctx);
 
