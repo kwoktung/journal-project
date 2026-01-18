@@ -1,6 +1,6 @@
 {
-  "id": "ad723651-c2b7-4abf-9e17-2c01550934c1",
-  "prevId": "544a7f5b-9f2b-4753-b98f-2fed8c3ea3db",
+  "id": "3f0d87f6-d921-436d-b082-e42843dd273d",
+  "prevId": "e4bf2d74-5654-4206-a080-c26a719292ef",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -21,9 +21,23 @@
           "notNull": true,
           "autoincrement": false
         },
-        "post_id": {
-          "name": "post_id",
+        "reference_type": {
+          "name": "reference_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reference_id": {
+          "name": "reference_id",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "thumb_hash": {
+          "name": "thumb_hash",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -38,6 +52,13 @@
         }
       },
       "indexes": {
+        "attachments_filename_unique": {
+          "name": "attachments_filename_unique",
+          "columns": [
+            "filename"
+          ],
+          "isUnique": true
+        },
         "attachments_filename_idx": {
           "name": "attachments_filename_idx",
           "columns": [
@@ -45,10 +66,17 @@
           ],
           "isUnique": false
         },
-        "attachments_post_id_idx": {
-          "name": "attachments_post_id_idx",
+        "attachments_reference_type_idx": {
+          "name": "attachments_reference_type_idx",
           "columns": [
-            "post_id"
+            "reference_type"
+          ],
+          "isUnique": false
+        },
+        "attachments_reference_id_idx": {
+          "name": "attachments_reference_id_idx",
+          "columns": [
+            "reference_id"
           ],
           "isUnique": false
         }

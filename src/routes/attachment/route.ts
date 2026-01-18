@@ -32,6 +32,8 @@ attachmentApp.openapi(createAttachment, async (c) => {
   const attachment = await services.attachment.uploadAttachment(
     file!,
     session.userId,
+    null, // referenceType - orphaned attachment, will be linked later
+    null, // referenceId
     thumbHash,
   );
 

@@ -27,12 +27,17 @@ export const userTable = sqliteTable(
 );
 
 // Attachments table
+// Tracks all R2 objects (post attachments, avatars, etc.)
+// referenceType and referenceId are null for orphaned attachments (uploaded but not yet linked)
 export const attachmentTable = sqliteTable(
   "attachments",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    filename: text("filename").notNull(),
-    postId: integer("post_id"),
+    filename: text("filename").notNull().unique(),
+    referenceType: text("reference_type", {
+      enum: ["post", "avatar"],
+    }), // null for orphaned attachments
+    referenceId: integer("reference_id"), // postId for posts, userId for avatars
     thumbHash: text("thumb_hash"),
     createdAt: integer("created_at", { mode: "timestamp" }).default(
       sql`(unixepoch())`,
@@ -41,7 +46,8 @@ export const attachmentTable = sqliteTable(
   (table) => {
     return [
       index("attachments_filename_idx").on(table.filename),
-      index("attachments_post_id_idx").on(table.postId),
+      index("attachments_reference_type_idx").on(table.referenceType),
+      index("attachments_reference_id_idx").on(table.referenceId),
     ];
   },
 );

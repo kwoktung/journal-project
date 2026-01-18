@@ -5,6 +5,8 @@ import { HTTPException } from "hono/http-exception";
 export interface AttachmentRecord {
   id: number;
   filename: string;
+  referenceType: "post" | "avatar" | null;
+  referenceId: number | null;
   thumbHash: string | null;
   createdAt: Date | null;
 }
@@ -59,6 +61,8 @@ export class AttachmentService extends BaseService {
    *
    * @param file - File to upload
    * @param userId - User ID uploading the file
+   * @param referenceType - Optional type of reference (post, avatar). Null for orphaned attachments.
+   * @param referenceId - Optional ID of the referenced entity (postId, userId, etc.)
    * @param thumbHash - Optional base64-encoded thumbhash for blur placeholder
    * @returns Uploaded attachment info
    * @throws ServiceError if file is missing or empty
@@ -67,6 +71,8 @@ export class AttachmentService extends BaseService {
   async uploadAttachment(
     file: File,
     userId: number,
+    referenceType?: "post" | "avatar" | null,
+    referenceId?: number | null,
     thumbHash?: string | null,
   ): Promise<UploadedAttachment> {
     // Validate file
@@ -105,6 +111,8 @@ export class AttachmentService extends BaseService {
       .insert(attachmentTable)
       .values({
         filename,
+        referenceType: referenceType || null,
+        referenceId: referenceId || null,
         thumbHash: thumbHash || null,
         createdAt: now,
       })
