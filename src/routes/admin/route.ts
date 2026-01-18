@@ -41,7 +41,7 @@ adminApp.use("/*", async (c, next) => {
 adminApp.openapi(cleanupOrphanedAttachments, async (c) => {
   const context = getCloudflareContext({ async: false });
   const db = getDatabase(context.env);
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
 
   const orphanedAttachments = await db
     .select()
@@ -168,7 +168,7 @@ adminApp.openapi(cleanupDeletedCouples, async (c) => {
 // Admin Attachment Upload Handler
 adminApp.openapi(createAdminAttachment, async (c) => {
   const context = getCloudflareContext({ async: false });
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const db = getDatabase(context.env);
 
   // Parse multipart form data
@@ -223,7 +223,7 @@ adminApp.openapi(createAdminAttachment, async (c) => {
 // Admin Post Creation Handler
 adminApp.openapi(createAdminPost, async (c) => {
   const context = getCloudflareContext({ async: false });
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const db = getDatabase(context.env);
 
   const body = c.req.valid("json");

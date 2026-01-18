@@ -24,7 +24,7 @@ postApp.openapi(createPost, async (c) => {
   const body = c.req.valid("json");
   const { text, attachments = [] } = body;
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const post = await services.post.createPost(
@@ -40,7 +40,7 @@ postApp.openapi(queryPosts, async (c) => {
   const { session, context } = await requireAuth(c);
   const query = c.req.valid("query");
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   // Parse cursor if provided
@@ -65,7 +65,7 @@ postApp.openapi(deletePost, async (c) => {
     throw new HTTPException(400, { message: "Invalid post ID" });
   }
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   await services.post.deletePost(session.userId, postId);

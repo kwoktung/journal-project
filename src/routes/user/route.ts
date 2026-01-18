@@ -21,13 +21,13 @@ const userApp = new OpenAPIHono({
 
 userApp.openapi(getUser, async (c) => {
   const context = getCloudflareContext({ async: false });
-  const session = await getSession(c, context.env.JWT_SECRET);
+  const ctx = createContext(context, c);
+  const session = await getSession(ctx);
 
   if (!session) {
     return c.json({ user: null });
   }
 
-  const ctx = createContext(context.env);
   const services = createServices(ctx);
 
   const user = await services.user.getUserById(session.userId);
@@ -45,7 +45,7 @@ userApp.openapi(updateAvatar, async (c) => {
   const body = c.req.valid("json");
   const { avatar } = body;
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const user = await services.user.updateAvatar(session.userId, avatar);

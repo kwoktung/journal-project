@@ -25,7 +25,7 @@ attachmentApp.openapi(createAttachment, async (c) => {
   const formData = await c.req.formData();
   const file = formData.get("file") as File | null;
 
-  const ctx = createContext(context.env);
+  const ctx = createContext(context, c);
   const services = createServices(ctx);
 
   const attachment = await services.attachment.uploadAttachment(
@@ -49,7 +49,7 @@ attachmentApp.openapi(getAttachment, async (c) => {
   const cacheKey = new Request(c.req.url, c.req.raw);
 
   const response = await cache.withCache(cacheKey, async () => {
-    const ctx = createContext(context.env);
+    const ctx = createContext(context, c);
     const services = createServices(ctx);
 
     const object = await services.attachment.getAttachment(filename);
