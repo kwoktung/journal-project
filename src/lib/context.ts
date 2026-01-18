@@ -20,7 +20,7 @@ export type Context = {
 
 export const createContext = (
   cloudflareContext: CloudflareContext,
-  honoContext: HonoContext
+  honoContext: HonoContext,
 ): Context => {
   return {
     env: cloudflareContext.env,

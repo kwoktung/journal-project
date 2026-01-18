@@ -14,9 +14,9 @@ export function useUpdateAvatar() {
       });
 
       // Update avatar with the uploaded filename
-      const avatarUrl = `/api/attachment/${uploadResponse.data.filename}`;
+      const avatarFilename = uploadResponse.data.filename;
       const response = await apiClient.user.patchApiUserAvatar({
-        avatar: avatarUrl,
+        avatar: avatarFilename,
       });
 
       return response.user;
