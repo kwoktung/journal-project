@@ -9,7 +9,7 @@ import {
   postTable,
   userTable,
 } from "@/database/schema";
-import { isNull, eq } from "drizzle-orm";
+import { isNull, eq, and } from "drizzle-orm";
 import { createContext } from "@/lib/context";
 import {
   cleanupOrphanedAttachments,
@@ -46,7 +46,7 @@ adminApp.openapi(cleanupOrphanedAttachments, async (c) => {
   const orphanedAttachments = await db
     .select()
     .from(attachmentTable)
-    .where(isNull(attachmentTable.postId));
+    .where(isNull(attachmentTable.referenceType));
 
   const deletedFilenames: string[] = [];
   const errors: string[] = [];
@@ -132,7 +132,12 @@ adminApp.openapi(cleanupDeletedCouples, async (c) => {
       for (const postId of postIds) {
         const deletedAttachments = await db
           .delete(attachmentTable)
-          .where(eq(attachmentTable.postId, postId))
+          .where(
+            and(
+              eq(attachmentTable.referenceType, "post"),
+              eq(attachmentTable.referenceId, postId),
+            ),
+          )
           .run();
         totalAttachmentsDeleted += deletedAttachments.meta.changes || 0;
       }

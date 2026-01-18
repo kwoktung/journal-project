@@ -1,7 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { HTTPException } from "hono/http-exception";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import { userTable, postTable, attachmentTable } from "@/database/schema";
 import { getDatabase } from "@/database/client";
 import { HttpResponse } from "@/lib/response";
@@ -221,7 +221,12 @@ authApp.openapi(deleteAccount, async (c) => {
     for (const postId of postIds) {
       await db
         .delete(attachmentTable)
-        .where(eq(attachmentTable.postId, postId))
+        .where(
+          and(
+            eq(attachmentTable.referenceType, "post"),
+            eq(attachmentTable.referenceId, postId),
+          ),
+        )
         .run();
     }
 

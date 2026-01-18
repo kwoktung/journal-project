@@ -149,7 +149,8 @@ export class PostService extends BaseService {
       await this.ctx.db
         .update(attachmentTable)
         .set({
-          postId: post.id,
+          referenceType: "post",
+          referenceId: post.id,
         })
         .where(inArray(attachmentTable.id, attachmentIds));
     }
@@ -158,7 +159,12 @@ export class PostService extends BaseService {
     const postAttachments = await this.ctx.db
       .select()
       .from(attachmentTable)
-      .where(eq(attachmentTable.postId, post.id));
+      .where(
+        and(
+          eq(attachmentTable.referenceType, "post"),
+          eq(attachmentTable.referenceId, post.id),
+        ),
+      );
 
     // Fetch post with user information
     const [postWithUser] = await this.ctx.db
@@ -291,17 +297,22 @@ export class PostService extends BaseService {
         ? await this.ctx.db
             .select()
             .from(attachmentTable)
-            .where(inArray(attachmentTable.postId, postIds))
+            .where(
+              and(
+                eq(attachmentTable.referenceType, "post"),
+                inArray(attachmentTable.referenceId, postIds),
+              ),
+            )
         : [];
 
-    // Group attachments by postId
+    // Group attachments by referenceId (postId)
     const attachmentsByPostId = allAttachments.reduce(
       (acc, attachment) => {
-        if (attachment.postId) {
-          if (!acc[attachment.postId]) {
-            acc[attachment.postId] = [];
+        if (attachment.referenceId) {
+          if (!acc[attachment.referenceId]) {
+            acc[attachment.referenceId] = [];
           }
-          acc[attachment.postId].push(attachment);
+          acc[attachment.referenceId].push(attachment);
         }
         return acc;
       },
@@ -375,7 +386,12 @@ export class PostService extends BaseService {
     // Hard delete associated attachments first
     await this.ctx.db
       .delete(attachmentTable)
-      .where(eq(attachmentTable.postId, postId));
+      .where(
+        and(
+          eq(attachmentTable.referenceType, "post"),
+          eq(attachmentTable.referenceId, postId),
+        ),
+      );
 
     // Hard delete the post
     await this.ctx.db.delete(postTable).where(eq(postTable.id, postId));

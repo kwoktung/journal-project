@@ -1,5 +1,5 @@
 import { BaseService } from "./service";
-import { userTable } from "@/database/schema";
+import { userTable, attachmentTable } from "@/database/schema";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
@@ -50,6 +50,7 @@ export class UserService extends BaseService {
 
   /**
    * Updates user avatar
+   * Creates attachment record if it doesn't exist
    *
    * @param userId - User ID to update
    * @param avatarFilename - New avatar filename (can be null to remove avatar)
@@ -67,6 +68,22 @@ export class UserService extends BaseService {
       if (!fileExists) {
         throw new HTTPException(400, {
           message: "Avatar file not found in storage",
+        });
+      }
+
+      // Create attachment record if it doesn't exist
+      const [existingAttachment] = await this.ctx.db
+        .select()
+        .from(attachmentTable)
+        .where(eq(attachmentTable.filename, avatarFilename))
+        .limit(1);
+
+      if (!existingAttachment) {
+        await this.ctx.db.insert(attachmentTable).values({
+          filename: avatarFilename,
+          referenceType: "avatar",
+          referenceId: userId,
+          createdAt: new Date(),
         });
       }
     }

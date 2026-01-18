@@ -179,13 +179,15 @@ describe("PostService", () => {
                 {
                   id: 1,
                   filename: "file1.jpg",
-                  postId: 1,
+                  referenceType: "post",
+                  referenceId: 1,
                   createdAt: new Date(),
                 },
                 {
                   id: 2,
                   filename: "file2.jpg",
-                  postId: 1,
+                  referenceType: "post",
+                  referenceId: 1,
                   createdAt: new Date(),
                 },
               ]),
@@ -316,8 +318,18 @@ describe("PostService", () => {
             }
             // Return attachments
             return vi.fn().mockResolvedValue([
-              { id: 1, filename: "file1.jpg", postId: 1 },
-              { id: 2, filename: "file2.jpg", postId: 2 },
+              {
+                id: 1,
+                filename: "file1.jpg",
+                referenceType: "post",
+                referenceId: 1,
+              },
+              {
+                id: 2,
+                filename: "file2.jpg",
+                referenceType: "post",
+                referenceId: 2,
+              },
             ])();
           }),
         }),
