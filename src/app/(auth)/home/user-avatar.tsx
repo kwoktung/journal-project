@@ -1,5 +1,5 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getAvatarUrl } from "../profile/avatar-utils";
+import { getAvatarUrl } from "@/lib/avatar";
 
 interface UserAvatarProps {
   user: {
