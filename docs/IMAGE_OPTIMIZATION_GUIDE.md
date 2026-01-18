@@ -22,6 +22,7 @@
 ### Image Upload and Storage (R2)
 
 **Upload Flow:**
+
 - **Entry Point:** `POST /api/attachment` (multipart/form-data)
 - **Service:** `AttachmentService.uploadAttachment()` in `src/services/attachment.service.ts`
 - **Process:**
@@ -32,17 +33,20 @@
   5. Attachment record saved to SQLite database with only filename
 
 **Database Storage:**
+
 - Table: `attachments` with fields: `id`, `filename`, `postId`, `createdAt`
 - Only the generated filename stored (not full URL)
 - Indexed on filename and postId
 
 **Caching Strategy:**
+
 - R2 responses cached for 1 year: `public, max-age=31536000, immutable`
 - Cached via Cloudflare Workers Cache API
 
 ### Image Serving/Display
 
 **URL Construction:**
+
 - Attachment URIs: `/attachment/{filename}` (constructed in `post.service.ts:324`)
 - Route: `GET /api/attachment/{filename}`
 - Retrieves from R2 storage, sets proper content-type headers, returns with ETag
@@ -74,6 +78,7 @@
 ### Image Processing
 
 **Client-Side Processing:**
+
 - **Cropping/Transformation** (`src/app/(auth)/home/image-processing-utils.ts`):
   - Canvas API for processing
   - Supports: crop, rotation (0°/90°/180°/270°), flip (H/V)
@@ -88,6 +93,7 @@
   - Keyboard shortcuts
 
 **Video Thumbnails:**
+
 - Extracted client-side using Canvas API
 - Lazy-loaded on viewport intersection (IntersectionObserver)
 
@@ -100,6 +106,7 @@
 5. ❌ **Single resolution** - No responsive variants for different screen sizes
 
 **Supported Formats:**
+
 - **Images:** jpg, jpeg, png, gif, webp, svg, bmp, ico
 - **Videos:** mp4, webm, ogg, mov, avi, wmv, flv, mkv, m4v
 
@@ -111,19 +118,20 @@
 
 **Standard Image Sizes:**
 
-| Platform | Use Case | Recommended Size | Aspect Ratio |
-|----------|----------|-----------------|--------------|
-| Instagram | Feed Square | 1080×1080px | 1:1 |
-| Instagram | Feed Portrait | 1080×1350px | 4:5 |
-| Instagram | Feed Landscape | 1080×566px | 1.91:1 |
-| Instagram | Reels Thumbnail | 1080×1920px | 9:16 |
-| Twitter/X | Feed Square | 1080×1080px | 1:1 |
-| Twitter/X | Feed Landscape | 1600×900px | 16:9 |
-| Twitter/X | Profile Photo | 400×400px | 1:1 |
-| Pinterest | Pin | 1000×1500px | 2:3 |
-| Pinterest | Square Pin | 1000×1000px | 1:1 |
+| Platform  | Use Case        | Recommended Size | Aspect Ratio |
+| --------- | --------------- | ---------------- | ------------ |
+| Instagram | Feed Square     | 1080×1080px      | 1:1          |
+| Instagram | Feed Portrait   | 1080×1350px      | 4:5          |
+| Instagram | Feed Landscape  | 1080×566px       | 1.91:1       |
+| Instagram | Reels Thumbnail | 1080×1920px      | 9:16         |
+| Twitter/X | Feed Square     | 1080×1080px      | 1:1          |
+| Twitter/X | Feed Landscape  | 1600×900px       | 16:9         |
+| Twitter/X | Profile Photo   | 400×400px        | 1:1          |
+| Pinterest | Pin             | 1000×1500px      | 2:3          |
+| Pinterest | Square Pin      | 1000×1000px      | 1:1          |
 
 **Key Insights:**
+
 - **1080px width** is the universal baseline (safe for all platforms)
 - Platforms optimize around this width for feed posts, stories, ads
 - Maximum file sizes typically 2MB for fast loading
@@ -133,19 +141,21 @@
 
 **Format Comparison:**
 
-| Format | Size vs JPEG | Quality | Decode Speed | Browser Support | Best For |
-|--------|-------------|---------|--------------|-----------------|----------|
-| **JPEG** | Baseline | Good | Fast | 100% | Legacy support |
-| **WebP** | -30% | Better | Fast | 100% (since 2020) | General use, animations |
-| **AVIF** | -50% | Best | Slower | 100% (since 2024) | High-quality photos |
+| Format   | Size vs JPEG | Quality | Decode Speed | Browser Support   | Best For                |
+| -------- | ------------ | ------- | ------------ | ----------------- | ----------------------- |
+| **JPEG** | Baseline     | Good    | Fast         | 100%              | Legacy support          |
+| **WebP** | -30%         | Better  | Fast         | 100% (since 2020) | General use, animations |
+| **AVIF** | -50%         | Best    | Slower       | 100% (since 2024) | High-quality photos     |
 
 **Key Findings:**
+
 - **AVIF:** 50% smaller than JPEG, 20-30% smaller than WebP, superior quality
 - **WebP:** 30% smaller than JPEG, faster decode, better for animations
 - **Browser Support:** Both WebP and AVIF now universally supported (Safari added AVIF in 2024)
 - **Recommendation:** Serve AVIF with WebP fallback using `<picture>` tag
 
 **Performance Characteristics:**
+
 - AVIF has slower encoding/decoding but file size savings compensate for latency
 - WebP faster to decode, excellent for UI elements
 - AVIF superior for high-quality photographs
@@ -161,11 +171,13 @@
 5. **Smooth transition** - Fade/crossfade for polish
 
 **Modern Implementations:**
+
 - Next.js `next/image` has built-in LQIP with `placeholder="blur"`
 - CSS-only approaches pack blur data into single CSS integer
 - Intersection Observer for lazy-loading when entering viewport
 
 **Perceived Performance Impact:**
+
 - **2-3x faster** perceived load time
 - Eliminates blank space/loading spinner flash
 - Provides visual context immediately
@@ -183,6 +195,7 @@
 **Native to Workers, zero dependencies.**
 
 **Capabilities:**
+
 - Resize, crop, rotate
 - Blur (radius 1-250)
 - Format conversion (JPEG, PNG, WebP, AVIF)
@@ -190,18 +203,19 @@
 - Output formats: `image/jpeg`, `image/png`, `image/webp`, `rgba`, `rgb`
 
 **Example:**
+
 ```typescript
 // Generate blur placeholder during upload
 export async function generateBlurPlaceholder(
   imageBuffer: ArrayBuffer,
-  env: Env
+  env: Env,
 ): Promise<string> {
   const image = await env.IMAGES.transform(imageBuffer, {
     width: 20,
     height: 20,
     blur: 5,
     quality: 70,
-    format: 'webp'
+    format: "webp",
   });
 
   const output = await image.arrayBuffer();
@@ -211,6 +225,7 @@ export async function generateBlurPlaceholder(
 ```
 
 **Setup:**
+
 ```toml
 # wrangler.toml
 [images]
@@ -218,11 +233,13 @@ binding = "IMAGES"
 ```
 
 **Pricing:**
+
 - $5/month for 100k images stored
 - First 5,000 transformations/month FREE
 - Additional transformations: $0.50 per 1,000
 
 **Limitations:**
+
 - Requires Cloudflare Images subscription
 - Images must be stored in Cloudflare Images or publicly accessible
 
@@ -231,6 +248,7 @@ binding = "IMAGES"
 **Best option for on-demand resizing without subscription.**
 
 **Example:**
+
 ```typescript
 // No Workers code needed - just construct URLs
 function getOptimizedImageUrl(filename: string, width: number) {
@@ -245,6 +263,7 @@ function getOptimizedImageUrl(filename: string, width: number) {
 ```
 
 **Available Parameters:**
+
 - `width`, `height` - Resize dimensions
 - `quality` - 1-100 (default 85)
 - `format` - `auto`, `webp`, `avif`, `jpeg`, `png`
@@ -252,11 +271,13 @@ function getOptimizedImageUrl(filename: string, width: number) {
 - `blur` - 1-250 (blur radius)
 
 **Pricing:**
+
 - **FREE tier:** 5,000 unique transformations/month
 - Cached transformations don't count against limit
 - Perfect for read-heavy apps
 
 **Architecture:**
+
 - Cache-first pipeline (transform once, cache forever)
 - No storage cost for variants (only original in R2)
 - Automatic format negotiation with `format=auto`
@@ -270,14 +291,15 @@ yarn add @cf-wasm/photon
 ```
 
 **Example:**
+
 ```typescript
-import * as photon from '@cf-wasm/photon';
+import * as photon from "@cf-wasm/photon";
 
 export async function generateBlurPlaceholder(
-  imageBuffer: ArrayBuffer
+  imageBuffer: ArrayBuffer,
 ): Promise<string> {
   const photonImage = photon.PhotonImage.new_from_byteslice(
-    new Uint8Array(imageBuffer)
+    new Uint8Array(imageBuffer),
   );
 
   // Resize to 20x20
@@ -296,6 +318,7 @@ export async function generateBlurPlaceholder(
 ```
 
 **Capabilities:**
+
 - Resize, crop, rotate, flip
 - Filters (blur, sharpen, edge detection)
 - Color adjustments
@@ -303,11 +326,13 @@ export async function generateBlurPlaceholder(
 - Format conversion
 
 **Pros:**
+
 - Free, open source
 - No external service dependencies
 - Works entirely in Workers
 
 **Cons:**
+
 - Larger bundle size (~500KB WASM)
 - Slower than native Cloudflare Images binding
 
@@ -320,6 +345,7 @@ yarn add thumbhash  # or blurhash
 ```
 
 **ThumbHash Example:**
+
 ```typescript
 import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
 
@@ -356,14 +382,15 @@ import { thumbHashToDataURL } from 'thumbhash';
 
 **ThumbHash vs BlurHash:**
 
-| Feature | ThumbHash | BlurHash |
-|---------|-----------|----------|
-| Size | ~25 bytes | ~30 bytes (string) |
-| Color Accuracy | Better | Good |
-| Aspect Ratio | Preserved | Not preserved |
-| Adoption | Newer (2023) | More established (2018) |
+| Feature        | ThumbHash    | BlurHash                |
+| -------------- | ------------ | ----------------------- |
+| Size           | ~25 bytes    | ~30 bytes (string)      |
+| Color Accuracy | Better       | Good                    |
+| Aspect Ratio   | Preserved    | Not preserved           |
+| Adoption       | Newer (2023) | More established (2018) |
 
 **Why Client-Side Generation Works Best:**
+
 - ✅ Browser Canvas API natively available
 - ✅ No WASM dependencies
 - ✅ Zero server processing overhead
@@ -379,14 +406,18 @@ import { thumbHashToDataURL } from 'thumbhash';
 **Implementation:**
 
 1. Update attachment URL construction:
+
 ```typescript
 // src/services/post.service.ts
-function getAttachmentUrl(filename: string, size: 'thumb' | 'medium' | 'large' | 'original' = 'medium') {
+function getAttachmentUrl(
+  filename: string,
+  size: "thumb" | "medium" | "large" | "original" = "medium",
+) {
   const sizes = {
     thumb: 300,
     medium: 800,
     large: 1600,
-    original: null
+    original: null,
   };
 
   const width = sizes[size];
@@ -397,10 +428,11 @@ function getAttachmentUrl(filename: string, size: 'thumb' | 'medium' | 'large' |
 ```
 
 2. Update Image components:
+
 ```tsx
 // Remove unoptimized={true}
 <Image
-  src={getAttachmentUrl(attachment.filename, 'medium')}
+  src={getAttachmentUrl(attachment.filename, "medium")}
   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px"
   loading="lazy"
   alt={attachment.filename}
@@ -408,18 +440,19 @@ function getAttachmentUrl(filename: string, size: 'thumb' | 'medium' | 'large' |
 ```
 
 **Expected Impact:**
+
 - **60-80% reduction** in image transfer size
 - Automatic WebP/AVIF delivery to supporting browsers
 - Zero cost (5,000 transformations/month free)
 
 **Recommended Sizes:**
 
-| Use Case | Width | When to Use |
-|----------|-------|-------------|
-| Thumbnail | 300px | Grid previews (up to 9-image grid) |
-| Medium | 800px | Mobile full-width, desktop 2-column |
-| Large | 1600px | Desktop full-screen gallery |
-| Original | N/A | Downloads, editing |
+| Use Case  | Width  | When to Use                         |
+| --------- | ------ | ----------------------------------- |
+| Thumbnail | 300px  | Grid previews (up to 9-image grid)  |
+| Medium    | 800px  | Mobile full-width, desktop 2-column |
+| Large     | 1600px | Desktop full-screen gallery         |
+| Original  | N/A    | Downloads, editing                  |
 
 ### Priority 2: ThumbHash Blur Placeholders (Better UX)
 
@@ -467,7 +500,7 @@ async uploadAttachment(file: File, thumbHash: string, postId: number) {
 
 ```tsx
 // src/app/(auth)/home/image-grid.tsx
-import { thumbHashToDataURL } from 'thumbhash';
+import { thumbHashToDataURL } from "thumbhash";
 
 function base64ToBytes(base64: string): Uint8Array {
   const binary = atob(base64);
@@ -479,14 +512,15 @@ function base64ToBytes(base64: string): Uint8Array {
 }
 
 <Image
-  src={getAttachmentUrl(attachment.filename, 'medium')}
+  src={getAttachmentUrl(attachment.filename, "medium")}
   placeholder="blur"
   blurDataURL={thumbHashToDataURL(base64ToBytes(attachment.thumbHash))}
   sizes="(max-width: 768px) 100vw, 800px"
-/>
+/>;
 ```
 
 **Expected Impact:**
+
 - **2-3x faster** perceived load time
 - Instant blur preview (no loading spinner flash)
 - Only **25 bytes** per image placeholder
@@ -501,7 +535,7 @@ function base64ToBytes(base64: string): Uint8Array {
 export async function compressImageForUpload(
   file: File,
   maxWidth = 1920,
-  quality = 0.85
+  quality = 0.85,
 ): Promise<Blob> {
   const img = await createImageBitmap(file);
 
@@ -514,12 +548,12 @@ export async function compressImageForUpload(
 
   // Resize and compress
   const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext("2d")!;
   ctx.drawImage(img, 0, 0, width, height);
 
   // Determine output format
   const hasTransparency = await checkTransparency(canvas);
-  const format = hasTransparency ? 'image/png' : 'image/jpeg';
+  const format = hasTransparency ? "image/png" : "image/jpeg";
 
   return canvas.convertToBlob({ type: format, quality });
 }
@@ -531,10 +565,11 @@ export async function compressImageForUpload(
 // Before upload
 const compressedBlob = await compressImageForUpload(originalFile);
 const compressedFile = new File([compressedBlob], originalFile.name);
-formData.append('file', compressedFile);
+formData.append("file", compressedFile);
 ```
 
 **Expected Impact:**
+
 - **50-70% smaller** uploads
 - Faster upload times (especially mobile networks)
 - Lower R2 storage costs
@@ -557,11 +592,11 @@ async function uploadVideo(videoFile: File, postId: number) {
 
   // Upload both video and thumbnail to R2
   const videoFilename = generateTimestampFilename(videoFile.name);
-  const thumbFilename = videoFilename.replace(/\.[^.]+$/, '-thumb.jpg');
+  const thumbFilename = videoFilename.replace(/\.[^.]+$/, "-thumb.jpg");
 
   await Promise.all([
     uploadToR2(videoFile, videoFilename),
-    uploadToR2(thumbnail, thumbFilename)
+    uploadToR2(thumbnail, thumbFilename),
   ]);
 
   // Store in DB
@@ -570,12 +605,13 @@ async function uploadVideo(videoFile: File, postId: number) {
     thumbFilename, // NEW
     thumbHash, // NEW
     postId,
-    createdAt: new Date()
+    createdAt: new Date(),
   });
 }
 ```
 
 **Expected Impact:**
+
 - Instant video previews
 - Lower client CPU usage
 - Consistent thumbnails across devices
@@ -587,6 +623,7 @@ async function uploadVideo(videoFile: File, postId: number) {
 ### Phase 1: Quick Wins (2-3 hours)
 
 **Tasks:**
+
 1. ✅ Update attachment URL construction to use Cloudflare transformations
 2. ✅ Define size variants (thumb: 300px, medium: 800px, large: 1600px)
 3. ✅ Remove `unoptimized={true}` from all Image components
@@ -594,12 +631,14 @@ async function uploadVideo(videoFile: File, postId: number) {
 5. ✅ Test automatic WebP/AVIF delivery
 
 **Files to Modify:**
+
 - `src/services/post.service.ts` - URL construction
 - `src/app/(auth)/home/image-grid.tsx` - Image component
 - `src/app/(auth)/home/gallery.tsx` - Gallery modal
 - `src/app/(auth)/home/attachment-item.tsx` - Attachment display
 
 **Expected Impact:**
+
 - **60-80% reduction** in image transfer size
 - Automatic format optimization
 - Zero cost (free tier)
@@ -607,6 +646,7 @@ async function uploadVideo(videoFile: File, postId: number) {
 ### Phase 2: ThumbHash Placeholders (3-4 hours)
 
 **Tasks:**
+
 1. ✅ Add `thumbHash TEXT` column to `attachments` table
 2. ✅ Install `thumbhash` package: `yarn add thumbhash`
 3. ✅ Create client-side ThumbHash generation utility
@@ -616,6 +656,7 @@ async function uploadVideo(videoFile: File, postId: number) {
 7. ✅ Migration script for existing attachments
 
 **Files to Modify:**
+
 - `src/database/schema.ts` - Add thumbHash column
 - `src/services/attachment.service.ts` - Store thumbHash
 - Create `src/lib/thumbhash-utils.ts` - Utilities
@@ -624,6 +665,7 @@ async function uploadVideo(videoFile: File, postId: number) {
 - `src/app/(auth)/home/image-upload.tsx` - Generate on upload
 
 **Expected Impact:**
+
 - **2-3x faster** perceived load time
 - Instant visual feedback
 - Only 25 bytes per image overhead
@@ -631,6 +673,7 @@ async function uploadVideo(videoFile: File, postId: number) {
 ### Phase 3: Upload Compression (2-3 hours)
 
 **Tasks:**
+
 1. ✅ Create image compression utility
 2. ✅ Integrate into upload flow
 3. ✅ Max width 1920px, quality 0.85
@@ -638,10 +681,12 @@ async function uploadVideo(videoFile: File, postId: number) {
 5. ✅ Test upload/display quality
 
 **Files to Modify:**
+
 - `src/app/(auth)/home/image-processing-utils.ts` - Add compression
 - `src/app/(auth)/home/image-upload.tsx` - Apply before upload
 
 **Expected Impact:**
+
 - **50-70% faster** uploads
 - Lower storage costs
 - Better mobile network performance
@@ -649,6 +694,7 @@ async function uploadVideo(videoFile: File, postId: number) {
 ### Phase 4: Video Optimization (3-4 hours)
 
 **Tasks:**
+
 1. ✅ Add `thumbFilename TEXT` to attachments table
 2. ✅ Create server-side video thumbnail extraction
 3. ✅ Upload thumbnails to R2 during video upload
@@ -656,12 +702,14 @@ async function uploadVideo(videoFile: File, postId: number) {
 5. ✅ Update video display components
 
 **Files to Modify:**
+
 - `src/database/schema.ts` - Add thumbFilename
 - `src/services/attachment.service.ts` - Video thumbnail logic
 - `src/app/(auth)/home/attachment-item.tsx` - Use stored thumbnail
 - `src/app/(auth)/home/video-utils.ts` - Thumbnail extraction
 
 **Expected Impact:**
+
 - Instant video previews
 - Consistent experience
 - Lower CPU usage
@@ -675,20 +723,22 @@ async function uploadVideo(videoFile: File, postId: number) {
 ### Image Size Strategy
 
 **Storage (R2):**
+
 - **Original:** Maximum 1920px width, 0.85 quality
 - **Format:** JPEG (photos), PNG (transparency), WebP (preserve if uploaded)
 - **Compression:** Applied client-side before upload
 
 **Delivery (Cloudflare Transformations):**
 
-| Variant | Width | Quality | Use Case | Cloudflare URL |
-|---------|-------|---------|----------|----------------|
-| Thumbnail | 300px | 85 | Grid previews (1-9 images) | `/cdn-cgi/image/width=300,quality=85,format=auto/attachment/{file}` |
-| Medium | 800px | 85 | Mobile full-width, desktop 2-col | `/cdn-cgi/image/width=800,quality=85,format=auto/attachment/{file}` |
-| Large | 1600px | 90 | Desktop full-screen gallery | `/cdn-cgi/image/width=1600,quality=90,format=auto/attachment/{file}` |
-| Original | N/A | N/A | Downloads, editing | `/attachment/{file}` |
+| Variant   | Width  | Quality | Use Case                         | Cloudflare URL                                                       |
+| --------- | ------ | ------- | -------------------------------- | -------------------------------------------------------------------- |
+| Thumbnail | 300px  | 85      | Grid previews (1-9 images)       | `/cdn-cgi/image/width=300,quality=85,format=auto/attachment/{file}`  |
+| Medium    | 800px  | 85      | Mobile full-width, desktop 2-col | `/cdn-cgi/image/width=800,quality=85,format=auto/attachment/{file}`  |
+| Large     | 1600px | 90      | Desktop full-screen gallery      | `/cdn-cgi/image/width=1600,quality=90,format=auto/attachment/{file}` |
+| Original  | N/A    | N/A     | Downloads, editing               | `/attachment/{file}`                                                 |
 
 **Blur Placeholder:**
+
 - **Size:** 20×20px
 - **Format:** ThumbHash (25 bytes as base64 string)
 - **Storage:** `attachments.thumbHash` column
@@ -697,17 +747,18 @@ async function uploadVideo(videoFile: File, postId: number) {
 ### Format Delivery Strategy
 
 **Cloudflare `format=auto` Priority:**
+
 1. **AVIF** - If browser supports (50% smaller than JPEG)
 2. **WebP** - If browser supports (30% smaller than JPEG)
 3. **Original format** - Fallback for legacy browsers
 
 **Browser Support Matrix (2026):**
 
-| Format | Chrome | Safari | Firefox | Edge | Support % |
-|--------|--------|--------|---------|------|-----------|
-| WebP | ✅ | ✅ | ✅ | ✅ | 100% |
-| AVIF | ✅ | ✅ (16.4+) | ✅ | ✅ | 100% |
-| JPEG | ✅ | ✅ | ✅ | ✅ | 100% |
+| Format | Chrome | Safari     | Firefox | Edge | Support % |
+| ------ | ------ | ---------- | ------- | ---- | --------- |
+| WebP   | ✅     | ✅         | ✅      | ✅   | 100%      |
+| AVIF   | ✅     | ✅ (16.4+) | ✅      | ✅   | 100%      |
+| JPEG   | ✅     | ✅         | ✅      | ✅   | 100%      |
 
 ### Responsive Image Sizes
 
@@ -715,19 +766,19 @@ async function uploadVideo(videoFile: File, postId: number) {
 
 ```typescript
 // Single image full-width
-sizes="(max-width: 768px) 100vw, 800px"
+sizes = "(max-width: 768px) 100vw, 800px";
 
 // Two-column grid
-sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
+sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px";
 
 // Three-column grid
-sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
 
 // Gallery full-screen
-sizes="100vw"
+sizes = "100vw";
 
 // Thumbnail preview
-sizes="140px"
+sizes = "140px";
 ```
 
 ### Database Schema Updates
@@ -746,33 +797,35 @@ WHERE thumbHash IS NOT NULL;
 
 **Expected Improvements:**
 
-| Metric | Current | After Phase 1 | After Phase 2 | After All Phases |
-|--------|---------|---------------|---------------|------------------|
-| Average Image Size | 2-3 MB | 400-600 KB | 400-600 KB | 300-500 KB |
-| Perceived Load Time | 2-3s | 1-1.5s | 0.5s (instant blur) | 0.5s |
-| Upload Time (3 MB photo) | 3-5s | 3-5s | 1-2s | 1-2s |
-| Storage Cost/Image | 2-3 MB | 2-3 MB | 2-3 MB | 500 KB - 1 MB |
-| Data Transfer/View | 2-3 MB | 400-600 KB | 400-600 KB | 300-500 KB |
+| Metric                   | Current | After Phase 1 | After Phase 2       | After All Phases |
+| ------------------------ | ------- | ------------- | ------------------- | ---------------- |
+| Average Image Size       | 2-3 MB  | 400-600 KB    | 400-600 KB          | 300-500 KB       |
+| Perceived Load Time      | 2-3s    | 1-1.5s        | 0.5s (instant blur) | 0.5s             |
+| Upload Time (3 MB photo) | 3-5s    | 3-5s          | 1-2s                | 1-2s             |
+| Storage Cost/Image       | 2-3 MB  | 2-3 MB        | 2-3 MB              | 500 KB - 1 MB    |
+| Data Transfer/View       | 2-3 MB  | 400-600 KB    | 400-600 KB          | 300-500 KB       |
 
 **Cost Analysis (Monthly, 1000 active users, 10 images/user):**
 
-| Item | Current | Optimized | Savings |
-|------|---------|-----------|---------|
-| R2 Storage (10k images) | $0.45 | $0.15 | $0.30 (67%) |
-| Bandwidth (100k views) | $0.40 | $0.08 | $0.32 (80%) |
-| Cloudflare Transformations | $0 | $0 | $0 (within free tier) |
-| **Total** | **$0.85** | **$0.23** | **$0.62 (73%)** |
+| Item                       | Current   | Optimized | Savings               |
+| -------------------------- | --------- | --------- | --------------------- |
+| R2 Storage (10k images)    | $0.45     | $0.15     | $0.30 (67%)           |
+| Bandwidth (100k views)     | $0.40     | $0.08     | $0.32 (80%)           |
+| Cloudflare Transformations | $0        | $0        | $0 (within free tier) |
+| **Total**                  | **$0.85** | **$0.23** | **$0.62 (73%)**       |
 
 ---
 
 ## References
 
 ### Social Media Image Sizes
+
 - [The Complete Social Media Image Sizes Cheat Sheet 2026](https://www.socialpilot.co/blog/social-media-image-sizes)
 - [Social Media Image Sizes in 2026: Guide for 9 Major Networks](https://buffer.com/resources/social-media-image-sizes/)
 - [The Complete Guide to Social Media Image Sizes in 2026](https://www.wordstream.com/blog/social-media-image-sizes)
 
 ### Cloudflare Image Optimization
+
 - [Optimizing image delivery with Cloudflare image resizing and R2](https://developers.cloudflare.com/reference-architecture/diagrams/content-delivery/optimizing-image-delivery-with-cloudflare-image-resizing-and-r2/)
 - [Transform user-uploaded images before uploading to R2](https://developers.cloudflare.com/images/tutorials/optimize-user-uploaded-image/)
 - [Cloudflare Images Overview](https://developers.cloudflare.com/images/)
@@ -780,24 +833,28 @@ WHERE thumbHash IS NOT NULL;
 - [Images Bindings in Workers](https://developers.cloudflare.com/images/transform-images/bindings/)
 
 ### Progressive Loading (LQIP)
+
 - [Low Quality Image Placeholders (LQIP) Explained](https://cloudinary.com/blog/low_quality_image_placeholders_lqip_explained)
 - [A clear look at blurry image placeholders on the web](https://www.mux.com/blog/blurry-image-placeholders-on-the-web)
 - [How Medium does progressive image loading](https://jmperezperez.com/blog/medium-image-progressive-loading-placeholder/)
 - [Progressive Image Loading and IntersectionObserver](https://medium.com/front-end-weekly/progressive-image-loading-and-intersectionobserver-d0359b5d90cd)
 
 ### Modern Image Formats
+
 - [AVIF vs WebP: Which Image Format Reigns Supreme in 2026?](https://elementor.com/blog/webp-vs-avif/)
 - [AVIF vs. WebP: 4 Key Differences and How to Choose](https://cloudinary.com/guides/image-formats/avif-vs-webp-4-key-differences-and-how-to-choose)
 - [Modern Image Formats: WebP vs AVIF and its browser support](https://www.rumvision.com/blog/modern-image-formats-webp-avif-browser-support/)
 - [WebP vs AVIF - Complete Image Format Comparison 2026](https://theimagecdn.com/docs/webp-vs-avif-vs-jpeg)
 
 ### Cloudflare Workers Image Processing
+
 - [Image processing in Cloudflare Workers](https://www.fineshopdesign.com/2025/12/image-processing-in-workers.html)
 - [Processing Images with Cloudflare Worker](https://kai.bi/post/cloudflare-worker-image)
 - [cf-wasm GitHub Collection](https://github.com/fineshopdesign/cf-wasm)
 - [Generating Image Placeholders on Cloudflare Workers](https://jeremymorrell.dev/sketches/lqip-images-on-cloudflare-workers/)
 
 ### ThumbHash/BlurHash
+
 - [Generate placeholder images at edge with thumbhash](https://dev.to/bryce/generate-thumbhash-at-edge-for-tiny-progressive-images-282h)
 - [BlurHash as a service with Cloudflare Workers](https://dev.to/taybenlor/blurhash-as-a-service-with-cloudflare-workers-l8k)
 - [ThumbHash GitHub](https://github.com/evanw/thumbhash)
@@ -810,14 +867,15 @@ WHERE thumbHash IS NOT NULL;
 ### Complete ThumbHash Integration
 
 **Client-Side Upload:**
+
 ```typescript
 // src/lib/thumbhash-utils.ts
-import { rgbaToThumbHash, thumbHashToDataURL } from 'thumbhash';
+import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash";
 
 export async function generateThumbHashForImage(file: File): Promise<string> {
   const img = await createImageBitmap(file);
   const canvas = new OffscreenCanvas(20, 20);
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext("2d")!;
   ctx.drawImage(img, 0, 0, 20, 20);
 
   const imageData = ctx.getImageData(0, 0, 20, 20);
@@ -836,9 +894,10 @@ export function thumbHashToDataUrl(thumbHashBase64: string): string {
 ```
 
 **Upload Component:**
+
 ```typescript
 // src/app/(auth)/home/create-post-form.tsx
-import { generateThumbHashForImage } from '@/lib/thumbhash-utils';
+import { generateThumbHashForImage } from "@/lib/thumbhash-utils";
 
 async function handleImageUpload(files: File[]) {
   const formData = new FormData();
@@ -850,8 +909,8 @@ async function handleImageUpload(files: File[]) {
     // Generate ThumbHash
     const thumbHash = await generateThumbHashForImage(file);
 
-    formData.append('files', compressed);
-    formData.append('thumbHashes', thumbHash);
+    formData.append("files", compressed);
+    formData.append("thumbHashes", thumbHash);
   }
 
   await uploadAttachments(formData, postId);
@@ -859,6 +918,7 @@ async function handleImageUpload(files: File[]) {
 ```
 
 **Server-Side Storage:**
+
 ```typescript
 // src/services/attachment.service.ts
 async uploadAttachments(
@@ -892,29 +952,30 @@ async uploadAttachments(
 ```
 
 **Display Component:**
+
 ```tsx
 // src/app/(auth)/home/optimized-image.tsx
-import Image from 'next/image';
-import { thumbHashToDataUrl } from '@/lib/thumbhash-utils';
+import Image from "next/image";
+import { thumbHashToDataUrl } from "@/lib/thumbhash-utils";
 
 interface OptimizedImageProps {
   attachment: {
     filename: string;
     thumbHash?: string;
   };
-  size?: 'thumb' | 'medium' | 'large';
+  size?: "thumb" | "medium" | "large";
   className?: string;
 }
 
 export function OptimizedImage({
   attachment,
-  size = 'medium',
-  className
+  size = "medium",
+  className,
 }: OptimizedImageProps) {
   const sizeMap = {
-    thumb: { width: 300, sizes: '300px' },
-    medium: { width: 800, sizes: '(max-width: 768px) 100vw, 800px' },
-    large: { width: 1600, sizes: '100vw' }
+    thumb: { width: 300, sizes: "300px" },
+    medium: { width: 800, sizes: "(max-width: 768px) 100vw, 800px" },
+    large: { width: 1600, sizes: "100vw" },
   };
 
   const { width, sizes } = sizeMap[size];
@@ -932,7 +993,7 @@ export function OptimizedImage({
       fill
       sizes={sizes}
       className={className}
-      placeholder={blurDataURL ? 'blur' : 'empty'}
+      placeholder={blurDataURL ? "blur" : "empty"}
       blurDataURL={blurDataURL}
     />
   );
@@ -944,33 +1005,32 @@ export function OptimizedImage({
 ```typescript
 // src/lib/image-utils.ts
 
-export type ImageSize = 'thumb' | 'medium' | 'large' | 'original';
+export type ImageSize = "thumb" | "medium" | "large" | "original";
 
 export interface ImageTransformOptions {
   width?: number;
   height?: number;
   quality?: number;
-  format?: 'auto' | 'webp' | 'avif' | 'jpeg' | 'png';
-  fit?: 'scale-down' | 'contain' | 'cover' | 'crop' | 'pad';
+  format?: "auto" | "webp" | "avif" | "jpeg" | "png";
+  fit?: "scale-down" | "contain" | "cover" | "crop" | "pad";
   blur?: number;
 }
 
 export function getOptimizedImageUrl(
   filename: string,
-  sizeOrOptions: ImageSize | ImageTransformOptions = 'medium'
+  sizeOrOptions: ImageSize | ImageTransformOptions = "medium",
 ): string {
   // Predefined sizes
   const presets: Record<ImageSize, ImageTransformOptions> = {
-    thumb: { width: 300, quality: 85, format: 'auto' },
-    medium: { width: 800, quality: 85, format: 'auto' },
-    large: { width: 1600, quality: 90, format: 'auto' },
-    original: {}
+    thumb: { width: 300, quality: 85, format: "auto" },
+    medium: { width: 800, quality: 85, format: "auto" },
+    large: { width: 1600, quality: 90, format: "auto" },
+    original: {},
   };
 
   // Determine options
-  const options = typeof sizeOrOptions === 'string'
-    ? presets[sizeOrOptions]
-    : sizeOrOptions;
+  const options =
+    typeof sizeOrOptions === "string" ? presets[sizeOrOptions] : sizeOrOptions;
 
   // Original - no transformation
   if (Object.keys(options).length === 0) {
@@ -986,16 +1046,16 @@ export function getOptimizedImageUrl(
   if (options.fit) params.push(`fit=${options.fit}`);
   if (options.blur) params.push(`blur=${options.blur}`);
 
-  return `/cdn-cgi/image/${params.join(',')}/attachment/${filename}`;
+  return `/cdn-cgi/image/${params.join(",")}/attachment/${filename}`;
 }
 
 // Helper for responsive sizes attribute
 export function getResponsiveSizes(size: ImageSize): string {
   const sizesMap: Record<ImageSize, string> = {
-    thumb: '300px',
-    medium: '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px',
-    large: '100vw',
-    original: '100vw'
+    thumb: "300px",
+    medium: "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px",
+    large: "100vw",
+    original: "100vw",
   };
 
   return sizesMap[size];
@@ -1003,6 +1063,7 @@ export function getResponsiveSizes(size: ImageSize): string {
 ```
 
 **Usage:**
+
 ```tsx
 import { getOptimizedImageUrl, getResponsiveSizes } from '@/lib/image-utils';
 

@@ -133,33 +133,20 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     );
   }
 
-  // 3 Images: 1 large left (7:8) + 2 stacked right (each takes half height)
+  // 3 Images: 1 row with 3 columns
   if (count === 3) {
     return (
-      <div className="mt-3 flex gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px] aspect-[16/10]">
-        <div className="flex-[2] min-w-0">
+      <div className="mt-3 grid grid-cols-3 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
+        {attachments.map((attachment, idx) => (
           <GridMedia
-            uri={attachments[0].uri}
-            thumbHash={attachments[0].thumbHash}
-            onClick={() => handleClick(0)}
-            className="h-full w-full"
-            priority
+            key={idx}
+            uri={attachment.uri}
+            thumbHash={attachment.thumbHash}
+            onClick={() => handleClick(idx)}
+            className="aspect-square"
+            priority={idx === 0}
           />
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-0">
-          <GridMedia
-            uri={attachments[1].uri}
-            thumbHash={attachments[1].thumbHash}
-            onClick={() => handleClick(1)}
-            className="flex-1 h-0 w-full"
-          />
-          <GridMedia
-            uri={attachments[2].uri}
-            thumbHash={attachments[2].thumbHash}
-            onClick={() => handleClick(2)}
-            className="flex-1 h-0 w-full"
-          />
-        </div>
+        ))}
       </div>
     );
   }

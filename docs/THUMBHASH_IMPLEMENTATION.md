@@ -20,11 +20,13 @@ Implemented ThumbHash blur placeholders to provide instant visual feedback while
 **File:** `src/database/schema.ts`
 
 Added `thumbHash` column to the `attachments` table:
+
 ```typescript
-thumbHash: text("thumb_hash")
+thumbHash: text("thumb_hash");
 ```
 
 **Migration:** Applied directly to local database:
+
 ```sql
 ALTER TABLE attachments ADD COLUMN thumb_hash text;
 ```
@@ -34,6 +36,7 @@ ALTER TABLE attachments ADD COLUMN thumb_hash text;
 **File:** `src/lib/thumbhash.ts`
 
 Created utility functions:
+
 - `generateThumbHashForImage(file: File)` - Generates thumbHash from image file using Canvas API
 - `thumbHashToDataUrl(thumbHashBase64: string)` - Converts thumbHash to data URL for display
 - `base64ToBytes(base64: string)` - Helper for decoding base64 strings
@@ -45,6 +48,7 @@ Created utility functions:
 **File:** `src/routes/attachment/schema.ts`
 
 Updated attachment schemas:
+
 ```typescript
 // Request schema - accepts optional thumbHash during upload
 createAttachmentRequestSchema: {
@@ -65,6 +69,7 @@ createAttachmentDataSchema: {
 **File:** `src/services/attachment.service.ts`
 
 Updated `AttachmentService`:
+
 - `uploadAttachment()` now accepts optional `thumbHash` parameter
 - Stores thumbHash in database during upload
 - Returns thumbHash in response
@@ -72,6 +77,7 @@ Updated `AttachmentService`:
 **File:** `src/services/post.service.ts`
 
 Updated post interfaces and responses:
+
 - `PostAttachment` includes `thumbHash` field
 - `PostAttachmentUri` includes `thumbHash` field
 - All post queries return thumbHash for attachments
@@ -81,6 +87,7 @@ Updated post interfaces and responses:
 **File:** `src/hooks/mutations/use-attachment-mutations.ts`
 
 Updated `useUploadAttachment()` mutation:
+
 ```typescript
 mutationFn: async (file: File) => {
   // Generate thumbHash for images and videos
@@ -89,7 +96,7 @@ mutationFn: async (file: File) => {
   if (file.type.startsWith("image/")) {
     thumbHash = await generateThumbHashForImage(file);
   } else if (file.type.startsWith("video/")) {
-    thumbHash = await generateThumbHashForVideo(file);  // Videos too!
+    thumbHash = await generateThumbHashForVideo(file); // Videos too!
   }
 
   const data = await apiClient.attachment.postApiAttachment({
@@ -97,10 +104,11 @@ mutationFn: async (file: File) => {
     thumbHash: thumbHash || undefined,
   });
   return data.data.id;
-}
+};
 ```
 
 **Process:**
+
 1. User selects image/video file
 2. ThumbHash generated client-side
    - Images: 20x20px, ~10ms
@@ -113,6 +121,7 @@ mutationFn: async (file: File) => {
 **File:** `src/app/(auth)/home/image-grid.tsx`
 
 Updated all image display instances:
+
 ```typescript
 // Accept thumbHash prop
 interface Attachment {
@@ -135,6 +144,7 @@ const blurDataURL = thumbHash ? thumbHashToDataUrl(thumbHash) : undefined;
 ```
 
 **Updated Components:**
+
 - All 7 image grid layouts (1-9 images)
 - GridMedia component with thumbHash support
 - Removed loading spinner when thumbHash available (instant blur preview instead)
@@ -142,10 +152,12 @@ const blurDataURL = thumbHash ? thumbHashToDataUrl(thumbHash) : undefined;
 ### 7. Migration Tools
 
 **Files:**
+
 - `scripts/generate-thumbhash-for-existing-attachments.ts` - Migration script
 - `scripts/THUMBHASH_MIGRATION_README.md` - Detailed migration guide
 
 **Migration Methods:**
+
 1. **Browser Console** (recommended) - Run JavaScript in browser to process existing images
 2. **Direct Database Update** - Manual SQL updates
 3. **API Endpoint** (future) - Automated background processing
@@ -156,22 +168,22 @@ const blurDataURL = thumbHash ? thumbHashToDataUrl(thumbHash) : undefined;
 
 ### ThumbHash Details
 
-| Property | Value |
-|----------|-------|
-| Thumbnail Size | 20×20 pixels |
-| Storage Size | ~25 bytes (base64) |
+| Property        | Value                         |
+| --------------- | ----------------------------- |
+| Thumbnail Size  | 20×20 pixels                  |
+| Storage Size    | ~25 bytes (base64)            |
 | Generation Time | ~10ms per image (client-side) |
-| Format | Base64-encoded Uint8Array |
-| Browser API | OffscreenCanvas + Canvas 2D |
+| Format          | Base64-encoded Uint8Array     |
+| Browser API     | OffscreenCanvas + Canvas 2D   |
 
 ### Performance Impact
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
+| Metric              | Before         | After                | Improvement     |
+| ------------------- | -------------- | -------------------- | --------------- |
 | Perceived Load Time | 2-3s (spinner) | <0.1s (instant blur) | **2-3x faster** |
-| Database Overhead | 0 bytes | ~25 bytes/image | Minimal |
-| Generation Overhead | 0ms | ~10ms/upload | Negligible |
-| Network Overhead | 0 bytes | ~25 bytes/upload | Minimal |
+| Database Overhead   | 0 bytes        | ~25 bytes/image      | Minimal         |
+| Generation Overhead | 0ms            | ~10ms/upload         | Negligible      |
+| Network Overhead    | 0 bytes        | ~25 bytes/upload     | Minimal         |
 
 ### Browser Compatibility
 
@@ -184,12 +196,14 @@ const blurDataURL = thumbHash ? thumbHashToDataUrl(thumbHash) : undefined;
 ## File Changes Summary
 
 ### New Files
+
 - `src/lib/thumbhash.ts` - Utility functions
 - `scripts/generate-thumbhash-for-existing-attachments.ts` - Migration script
 - `scripts/THUMBHASH_MIGRATION_README.md` - Migration guide
 - `docs/THUMBHASH_IMPLEMENTATION.md` - This file
 
 ### Modified Files
+
 - `src/database/schema.ts` - Added thumbHash column
 - `src/routes/attachment/schema.ts` - Updated API schemas
 - `src/routes/attachment/route.ts` - Extract thumbHash from formData
@@ -200,6 +214,7 @@ const blurDataURL = thumbHash ? thumbHashToDataUrl(thumbHash) : undefined;
 - `package.json` - Added thumbhash dependency
 
 ### Dependencies Added
+
 ```json
 {
   "thumbhash": "^0.1.1"
@@ -224,6 +239,7 @@ ThumbHash is now automatically generated for all new image uploads. No manual in
 See `scripts/THUMBHASH_MIGRATION_README.md` for detailed migration instructions.
 
 **Quick Migration (Browser Console):**
+
 ```javascript
 // Open browser console, run migration script
 // See THUMBHASH_MIGRATION_README.md for full script
@@ -245,12 +261,14 @@ See `scripts/THUMBHASH_MIGRATION_README.md` for detailed migration instructions.
 ## Testing
 
 ### Type Checking
+
 ```bash
 yarn lint
 # ✅ All type checks pass
 ```
 
 ### Manual Testing Checklist
+
 - [ ] Upload new image - thumbHash generated
 - [ ] View post with images - blur placeholder appears
 - [ ] Load image - smooth transition from blur to full image
@@ -259,6 +277,7 @@ yarn lint
 - [ ] Existing images without thumbHash - show spinner (graceful degradation)
 
 ### Database Verification
+
 ```sql
 -- Check thumbHash was stored
 SELECT id, filename, thumb_hash FROM attachments WHERE thumb_hash IS NOT NULL LIMIT 5;
@@ -271,6 +290,7 @@ SELECT id, filename, thumb_hash FROM attachments WHERE thumb_hash IS NOT NULL LI
 ### Phase 2: Cloudflare Image Transformations (Recommended Next)
 
 Add responsive image sizing:
+
 ```typescript
 // Serve optimized sizes based on device
 function getOptimizedImageUrl(filename: string, width: number) {
@@ -279,6 +299,7 @@ function getOptimizedImageUrl(filename: string, width: number) {
 ```
 
 **Benefits:**
+
 - 60-80% reduction in image transfer size
 - Automatic WebP/AVIF conversion
 - Free tier: 5,000 transformations/month
@@ -286,12 +307,14 @@ function getOptimizedImageUrl(filename: string, width: number) {
 ### Phase 3: Upload Compression
 
 Compress images before upload:
+
 ```typescript
 // Resize to max 1920px, quality 0.85
 const compressed = await compressImageForUpload(file);
 ```
 
 **Benefits:**
+
 - 50-70% faster uploads
 - Lower R2 storage costs
 
@@ -315,17 +338,20 @@ Generate video thumbnails during upload (currently done client-side on every vie
 ## Troubleshooting
 
 ### ThumbHash not appearing
+
 1. Check database: `SELECT thumb_hash FROM attachments WHERE id = X;`
 2. Verify API returns thumbHash in response
 3. Check browser console for errors
 4. Ensure image type (not video)
 
 ### "Failed to generate thumbHash" error
+
 1. Check browser compatibility (need OffscreenCanvas support)
 2. Verify image file is valid
 3. Check console for detailed error message
 
 ### Blur placeholder looks wrong
+
 1. ThumbHash is meant to be very blurry (20×20 source)
 2. Should transition smoothly to full image
 3. Check thumbHash data is not corrupted
