@@ -85,6 +85,13 @@ describe("UserService", () => {
     it("should update user avatar successfully", async () => {
       const userId = 1;
       const newAvatar = "1234567890-abc-123.jpg";
+      const currentUser = {
+        id: userId,
+        email: "test@example.com",
+        username: "testuser",
+        displayName: "Test User",
+        avatar: "old-avatar.jpg",
+      };
       const updatedUser = {
         id: userId,
         email: "test@example.com",
@@ -92,6 +99,30 @@ describe("UserService", () => {
         displayName: "Test User",
         avatar: newAvatar,
       };
+      const mockAttachment = {
+        id: 1,
+        filename: newAvatar,
+        referenceType: null,
+        referenceId: null,
+      };
+
+      // Mock db.select - called twice: first for current user, second for attachment
+      mockCtx.db.select = vi
+        .fn()
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([currentUser]),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([mockAttachment]),
+            }),
+          }),
+        });
 
       // Mock R2.get to simulate file exists
       mockCtx.env.R2.get = vi.fn().mockResolvedValue({
@@ -101,12 +132,28 @@ describe("UserService", () => {
         httpEtag: "test-etag",
       });
 
-      mockCtx.db.update = vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([updatedUser]),
+      // Mock R2.delete for old avatar
+      mockCtx.env.R2.delete = vi.fn().mockResolvedValue(undefined);
+
+      // Mock db.update - called twice: first for attachment, second for user
+      mockCtx.db.update = vi
+        .fn()
+        .mockReturnValueOnce({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
           }),
-        }),
+        })
+        .mockReturnValueOnce({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([updatedUser]),
+            }),
+          }),
+        });
+
+      // Mock db.delete for old avatar attachment
+      mockCtx.db.delete = vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
       });
 
       const result = await userService.updateAvatar(userId, newAvatar);
@@ -114,11 +161,18 @@ describe("UserService", () => {
       expect(result).toBeDefined();
       expect(result.avatar).toBe(newAvatar);
       expect(mockCtx.env.R2.get).toHaveBeenCalledWith(newAvatar);
-      expect(mockCtx.db.update).toHaveBeenCalled();
+      expect(mockCtx.env.R2.delete).toHaveBeenCalledWith("old-avatar.jpg");
     });
 
     it("should allow setting avatar to null", async () => {
       const userId = 1;
+      const currentUser = {
+        id: userId,
+        email: "test@example.com",
+        username: "testuser",
+        displayName: "Test User",
+        avatar: "old-avatar.jpg",
+      };
       const updatedUser = {
         id: userId,
         email: "test@example.com",
@@ -127,8 +181,20 @@ describe("UserService", () => {
         avatar: null,
       };
 
+      // Mock db.select to get current user
+      mockCtx.db.select = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([currentUser]),
+          }),
+        }),
+      });
+
       // Mock R2.get as a spy to verify it's not called
       mockCtx.env.R2.get = vi.fn();
+
+      // Mock R2.delete for old avatar
+      mockCtx.env.R2.delete = vi.fn().mockResolvedValue(undefined);
 
       mockCtx.db.update = vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
@@ -138,17 +204,40 @@ describe("UserService", () => {
         }),
       });
 
+      // Mock db.delete for old avatar attachment
+      mockCtx.db.delete = vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      });
+
       const result = await userService.updateAvatar(userId, null);
 
       expect(result).toBeDefined();
       expect(result.avatar).toBeNull();
       // Should not check R2 when setting avatar to null
       expect(mockCtx.env.R2.get).not.toHaveBeenCalled();
+      // Should delete old avatar
+      expect(mockCtx.env.R2.delete).toHaveBeenCalledWith("old-avatar.jpg");
     });
 
     it("should throw HTTPException if avatar file not found in R2", async () => {
       const userId = 1;
       const avatarFilename = "nonexistent-file.jpg";
+      const currentUser = {
+        id: userId,
+        email: "test@example.com",
+        username: "testuser",
+        displayName: "Test User",
+        avatar: null,
+      };
+
+      // Mock db.select to get current user
+      mockCtx.db.select = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([currentUser]),
+          }),
+        }),
+      });
 
       // Mock R2.get to simulate file doesn't exist
       mockCtx.env.R2.get = vi.fn().mockResolvedValue(null);
