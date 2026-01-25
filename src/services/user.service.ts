@@ -1,6 +1,6 @@
 import { BaseService } from "./service";
 import { userTable, attachmentTable } from "@/database/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 export interface UserInfo {
@@ -50,20 +50,41 @@ export class UserService extends BaseService {
 
   /**
    * Updates user avatar
-   * Creates attachment record if it doesn't exist
+   * Links an orphaned attachment to the user and deletes the old avatar
    *
    * @param userId - User ID to update
    * @param avatarFilename - New avatar filename (can be null to remove avatar)
    * @returns Updated user information
    * @throws NotFoundError if user not found
-   * @throws BadRequestError if avatar file doesn't exist in R2
+   * @throws BadRequestError if avatar file doesn't exist in R2 or attachment table
+   * @throws BadRequestError if attachment is already linked to another resource
    */
   async updateAvatar(
     userId: number,
     avatarFilename: string | null,
   ): Promise<UserInfo> {
-    // Validate that the avatar file exists in R2 storage if filename is provided
+    // Get current user to check for old avatar
+    const [currentUser] = await this.ctx.db
+      .select({
+        id: userTable.id,
+        email: userTable.email,
+        username: userTable.username,
+        displayName: userTable.displayName,
+        avatar: userTable.avatar,
+      })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1);
+
+    if (!currentUser) {
+      throw new HTTPException(404, { message: "User not found" });
+    }
+
+    const oldAvatar = currentUser.avatar;
+
+    // Validate and link the new avatar if filename is provided
     if (avatarFilename !== null) {
+      // Check if file exists in R2 storage
       const fileExists = await this.ctx.env.R2.get(avatarFilename);
       if (!fileExists) {
         throw new HTTPException(400, {
@@ -71,25 +92,42 @@ export class UserService extends BaseService {
         });
       }
 
-      // Create attachment record if it doesn't exist
-      const [existingAttachment] = await this.ctx.db
+      // Check if attachment exists in the attachment table
+      const [attachment] = await this.ctx.db
         .select()
         .from(attachmentTable)
         .where(eq(attachmentTable.filename, avatarFilename))
         .limit(1);
 
-      if (!existingAttachment) {
-        await this.ctx.db.insert(attachmentTable).values({
-          filename: avatarFilename,
-          referenceType: "avatar",
-          referenceId: userId,
-          createdAt: new Date(),
+      if (!attachment) {
+        throw new HTTPException(400, {
+          message: "Attachment record not found",
         });
       }
+
+      // Verify that referenceType and referenceId are null (orphaned attachment)
+      if (
+        attachment.referenceType !== null ||
+        attachment.referenceId !== null
+      ) {
+        throw new HTTPException(400, {
+          message: "Attachment is already linked to another resource",
+        });
+      }
+
+      // Update attachment to link it to the user (referenceType: "avatar", referenceId: userId)
+      await this.ctx.db
+        .update(attachmentTable)
+        .set({
+          referenceType: "avatar",
+          referenceId: userId,
+        })
+        .where(eq(attachmentTable.id, attachment.id));
     }
 
     const now = new Date();
 
+    // Update the user's avatar field
     const [updatedUser] = await this.ctx.db
       .update(userTable)
       .set({
@@ -107,6 +145,17 @@ export class UserService extends BaseService {
 
     if (!updatedUser) {
       throw new HTTPException(404, { message: "User not found" });
+    }
+
+    // Delete the old avatar if it exists
+    if (oldAvatar) {
+      // Delete from R2
+      await this.ctx.env.R2.delete(oldAvatar);
+
+      // Delete from attachment table
+      await this.ctx.db
+        .delete(attachmentTable)
+        .where(eq(attachmentTable.filename, oldAvatar));
     }
 
     return {
