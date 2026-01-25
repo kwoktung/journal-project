@@ -4,7 +4,11 @@ import { createContext } from "@/lib/context";
 import { HttpResponse } from "@/lib/response";
 import { createServices } from "@/services";
 import { requireAuth } from "@/lib/auth/route-helpers";
-import { getAttachment, createAttachment } from "./definition";
+import {
+  getAttachment,
+  createAttachment,
+  updateAttachmentThumbHash,
+} from "./definition";
 import { createCache } from "@/lib/cache";
 
 const attachmentApp = new OpenAPIHono({
@@ -83,6 +87,23 @@ attachmentApp.openapi(getAttachment, async (c) => {
   });
 
   return response;
+});
+
+attachmentApp.openapi(updateAttachmentThumbHash, async (c) => {
+  const { session, context } = await requireAuth(c);
+  const { filename } = c.req.valid("param");
+  const { thumbHash } = c.req.valid("json");
+
+  const ctx = createContext(context, c);
+  const services = createServices(ctx);
+
+  const result = await services.attachment.updateThumbHash(
+    filename,
+    thumbHash,
+    session.userId,
+  );
+
+  return HttpResponse.success(c, result);
 });
 
 export default attachmentApp;

@@ -403,10 +403,15 @@
                                 "uri": {
                                   "type": "string",
                                   "description": "URI to access the attachment",
-                                  "example": "/api/attachment/1234567890-uuid.jpg"
+                                  "example": "/attachment/1234567890-uuid.jpg"
+                                },
+                                "thumbHash": {
+                                  "type": ["string", "null"],
+                                  "description": "Base64-encoded thumbhash for blur placeholder (~25 bytes)",
+                                  "example": "1QcSHQRnh493V4dIh4eXh4MG"
                                 }
                               },
-                              "required": ["uri"]
+                              "required": ["uri", "thumbHash"]
                             }
                           }
                         },
@@ -498,7 +503,7 @@
                 "properties": {
                   "file": {
                     "type": "object",
-                    "description": "The file to upload as an attachment"
+                    "description": "The file to upload as an attachment (max size: 50MB)"
                   },
                   "thumbHash": {
                     "type": "string",
@@ -536,12 +541,74 @@
             }
           },
           "400": {
-            "description": "Bad request - Invalid file or missing file"
+            "description": "Bad request - Invalid file, missing file, or file size exceeds 50MB"
           },
           "401": { "description": "Unauthorized - Authentication required" },
           "500": {
             "description": "Internal server error - Failed to create attachment"
           }
+        }
+      }
+    },
+    "/api/attachment/{filename}/thumbhash": {
+      "patch": {
+        "tags": ["attachment"],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The attachment filename to update",
+              "example": "1234567890-abc123-def456.jpg"
+            },
+            "required": true,
+            "description": "The attachment filename to update",
+            "name": "filename",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "thumbHash": {
+                    "type": "string",
+                    "description": "Base64-encoded thumbhash for blur placeholder (~25 bytes)",
+                    "example": "1QcSHQRnh493V4dIh4eXh4MG"
+                  }
+                },
+                "required": ["thumbHash"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ThumbHash updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "enum": [true] },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "filename": { "type": "string" },
+                        "thumbHash": { "type": "string" }
+                      },
+                      "required": ["filename", "thumbHash"]
+                    }
+                  },
+                  "required": ["success", "data"]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - Authentication required" },
+          "404": { "description": "Attachment not found or access denied" },
+          "500": { "description": "Internal server error" }
         }
       }
     },

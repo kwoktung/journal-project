@@ -4,7 +4,7 @@ export interface Post {
   createdBy: number;
   createdAt: string;
   updatedAt: string | null;
-  attachments: Array<{ uri: string }>;
+  attachments: Array<{ uri: string; thumbHash?: string | null }>;
   user: {
     id: number;
     username: string;

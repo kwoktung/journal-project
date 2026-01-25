@@ -1,6 +1,11 @@
 import { BaseService } from "./service";
-import { attachmentTable } from "@/database/schema";
+import {
+  attachmentTable,
+  postTable,
+  relationshipTable,
+} from "@/database/schema";
 import { HTTPException } from "hono/http-exception";
+import { eq, and, or } from "drizzle-orm";
 
 export interface AttachmentRecord {
   id: number;
@@ -145,6 +150,82 @@ export class AttachmentService extends BaseService {
       httpMetadata: object.httpMetadata,
       size: object.size,
       httpEtag: object.httpEtag,
+    };
+  }
+
+  /**
+   * Updates the thumbHash for an attachment
+   * Validates user has access to the attachment
+   *
+   * @param filename - Attachment filename to update
+   * @param thumbHash - Base64-encoded thumbHash
+   * @param userId - User ID performing the update
+   * @returns Updated attachment info
+   * @throws HTTPException if attachment not found or access denied
+   */
+  async updateThumbHash(
+    filename: string,
+    thumbHash: string,
+    userId: number,
+  ): Promise<{ filename: string; thumbHash: string }> {
+    // Verify attachment exists
+    const [attachment] = await this.ctx.db
+      .select()
+      .from(attachmentTable)
+      .where(eq(attachmentTable.filename, filename))
+      .limit(1);
+
+    if (!attachment) {
+      throw new HTTPException(404, { message: "Attachment not found" });
+    }
+
+    // If attachment is linked to a post, verify user has access
+    if (attachment.referenceType === "post" && attachment.referenceId) {
+      const [post] = await this.ctx.db
+        .select({ relationshipId: postTable.relationshipId })
+        .from(postTable)
+        .where(eq(postTable.id, attachment.referenceId))
+        .limit(1);
+
+      if (!post) {
+        throw new HTTPException(404, { message: "Associated post not found" });
+      }
+
+      // Verify user is in the relationship
+      const [relationship] = await this.ctx.db
+        .select()
+        .from(relationshipTable)
+        .where(
+          and(
+            eq(relationshipTable.id, post.relationshipId!),
+            or(
+              eq(relationshipTable.user1Id, userId),
+              eq(relationshipTable.user2Id, userId),
+            ),
+          ),
+        )
+        .limit(1);
+
+      if (!relationship) {
+        throw new HTTPException(404, {
+          message: "Attachment not found or access denied",
+        });
+      }
+    }
+
+    // Update thumbHash
+    const [updated] = await this.ctx.db
+      .update(attachmentTable)
+      .set({ thumbHash })
+      .where(eq(attachmentTable.filename, filename))
+      .returning({
+        filename: attachmentTable.filename,
+        thumbHash: attachmentTable.thumbHash,
+      });
+
+    return {
+      filename: updated.filename,
+      thumbHash: updated.thumbHash!,
     };
   }
 }

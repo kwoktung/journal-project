@@ -72,6 +72,10 @@ export class PostService {
                  * URI to access the attachment
                  */
                 uri: string;
+                /**
+                 * Base64-encoded thumbhash for blur placeholder (~25 bytes)
+                 */
+                thumbHash: string | null;
             }>;
         }>;
         /**

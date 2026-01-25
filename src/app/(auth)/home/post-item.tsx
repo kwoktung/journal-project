@@ -18,7 +18,10 @@ interface PostItemProps {
   isDeleting: boolean;
   currentUserId?: number;
   onDelete: (postId: number) => void;
-  onImageClick: (attachments: Array<{ uri: string }>, index: number) => void;
+  onImageClick: (
+    attachments: Array<{ uri: string; thumbHash?: string | null }>,
+    index: number,
+  ) => void;
 }
 
 export const PostItem = ({
