@@ -37,7 +37,11 @@ export const postAttachmentSchema = z.object({
 export const queryPostAttachmentSchema = z.object({
   uri: z.string().openapi({
     description: "URI to access the attachment",
-    example: "/api/attachment/1234567890-uuid.jpg",
+    example: "/attachment/1234567890-uuid.jpg",
+  }),
+  thumbHash: z.string().nullable().openapi({
+    description: "Base64-encoded thumbhash for blur placeholder (~25 bytes)",
+    example: "1QcSHQRnh493V4dIh4eXh4MG",
   }),
 });
 

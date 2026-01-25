@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { VideoThumbnail } from "@/components/video/video-thumbnail";
 import { getFileType, getFilename } from "./attachment-utils";
 import { thumbHashToDataUrl } from "@/lib/thumbhash";
+import { useUpdateAttachmentThumbHash } from "@/hooks/mutations/use-attachment-mutations";
 
 interface Attachment {
   uri: string;
@@ -23,6 +24,32 @@ interface GridMediaProps {
   className?: string;
   priority?: boolean;
 }
+
+/**
+ * Side-effect component that handles automatic thumbHash generation and updates
+ * Returns null - purely for managing thumbHash updates as a side effect
+ */
+const ThumbHashUpdater = ({
+  uri,
+  thumbHash,
+}: {
+  uri: string;
+  thumbHash?: string | null;
+}) => {
+  const updateMutation = useUpdateAttachmentThumbHash();
+  const hasAttemptedUpdate = useRef(false);
+
+  useEffect(() => {
+    // Only attempt update if thumbHash is missing and we haven't tried before
+    if (!thumbHash && !hasAttemptedUpdate.current) {
+      hasAttemptedUpdate.current = true;
+
+      updateMutation.mutate({ uri });
+    }
+  }, [uri, thumbHash, updateMutation]);
+
+  return null;
+};
 
 const GridMedia = ({
   uri,
@@ -83,6 +110,31 @@ const GridMedia = ({
   return null;
 };
 
+/**
+ * Wrapper component that encapsulates thumbHash update logic and media rendering
+ * Combines ThumbHashUpdater (side effects) and GridMedia (rendering) into one component
+ */
+const GridMediaWithUpdate = ({
+  uri,
+  thumbHash,
+  onClick,
+  className = "",
+  priority = false,
+}: GridMediaProps) => {
+  return (
+    <>
+      <ThumbHashUpdater uri={uri} thumbHash={thumbHash} />
+      <GridMedia
+        uri={uri}
+        thumbHash={thumbHash}
+        onClick={onClick}
+        className={className}
+        priority={priority}
+      />
+    </>
+  );
+};
+
 export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   const count = attachments.length;
 
@@ -98,7 +150,7 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
       <div className="mt-3 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[600px]">
         <div className="relative w-full aspect-video">
           <div className="relative w-full h-full">
-            <GridMedia
+            <GridMediaWithUpdate
               uri={attachments[0].uri}
               thumbHash={attachments[0].thumbHash}
               onClick={() => handleClick(0)}
@@ -115,14 +167,14 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
   if (count === 2) {
     return (
       <div className="mt-3 grid grid-cols-2 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
-        <GridMedia
+        <GridMediaWithUpdate
           uri={attachments[0].uri}
           thumbHash={attachments[0].thumbHash}
           onClick={() => handleClick(0)}
           className="aspect-[7/8]"
           priority
         />
-        <GridMedia
+        <GridMediaWithUpdate
           uri={attachments[1].uri}
           thumbHash={attachments[1].thumbHash}
           onClick={() => handleClick(1)}
@@ -138,8 +190,8 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 grid grid-cols-3 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         {attachments.map((attachment, idx) => (
-          <GridMedia
-            key={idx}
+          <GridMediaWithUpdate
+            key={attachment.uri}
             uri={attachment.uri}
             thumbHash={attachment.thumbHash}
             onClick={() => handleClick(idx)}
@@ -156,8 +208,8 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 grid grid-cols-2 gap-0 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         {attachments.map((attachment, idx) => (
-          <GridMedia
-            key={idx}
+          <GridMediaWithUpdate
+            key={attachment.uri}
             uri={attachment.uri}
             thumbHash={attachment.thumbHash}
             onClick={() => handleClick(idx)}
@@ -175,8 +227,8 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
       <div className="mt-3 rounded-[16px] overflow-hidden border border-border max-h-[400px] md:max-h-[506px]">
         <div className="grid grid-cols-2 gap-0">
           {attachments.slice(0, 2).map((attachment, idx) => (
-            <GridMedia
-              key={idx}
+            <GridMediaWithUpdate
+              key={attachment.uri}
               uri={attachment.uri}
               thumbHash={attachment.thumbHash}
               onClick={() => handleClick(idx)}
@@ -187,8 +239,8 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
         </div>
         <div className="grid grid-cols-3 gap-0">
           {attachments.slice(2, 5).map((attachment, idx) => (
-            <GridMedia
-              key={idx + 2}
+            <GridMediaWithUpdate
+              key={attachment.uri}
               uri={attachment.uri}
               thumbHash={attachment.thumbHash}
               onClick={() => handleClick(idx + 2)}
@@ -205,8 +257,8 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 grid grid-cols-3 gap-0 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px]">
         {attachments.map((attachment, idx) => (
-          <GridMedia
-            key={idx}
+          <GridMediaWithUpdate
+            key={attachment.uri}
             uri={attachment.uri}
             thumbHash={attachment.thumbHash}
             onClick={() => handleClick(idx)}
@@ -223,8 +275,8 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
     return (
       <div className="mt-3 grid grid-cols-3 gap-0 rounded-lg md:rounded-2xl overflow-hidden border max-h-[400px] md:max-h-[506px]">
         {attachments.slice(0, 9).map((attachment, idx) => (
-          <GridMedia
-            key={idx}
+          <GridMediaWithUpdate
+            key={attachment.uri}
             uri={attachment.uri}
             thumbHash={attachment.thumbHash}
             onClick={() => handleClick(idx)}

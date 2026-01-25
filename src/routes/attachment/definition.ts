@@ -3,6 +3,9 @@ import {
   getAttachmentParamsSchema,
   createAttachmentRequestSchema,
   createAttachmentResponseSchema,
+  updateAttachmentThumbHashParamsSchema,
+  updateAttachmentThumbHashRequestSchema,
+  updateAttachmentThumbHashResponseSchema,
 } from "./schema";
 
 export const getAttachment = createRoute({
@@ -61,5 +64,34 @@ export const createAttachment = createRoute({
     500: {
       description: "Internal server error - Failed to create attachment",
     },
+  },
+});
+
+export const updateAttachmentThumbHash = createRoute({
+  method: "patch",
+  tags: ["attachment"],
+  path: "/{filename}/thumbhash",
+  request: {
+    params: updateAttachmentThumbHashParamsSchema,
+    body: {
+      content: {
+        "application/json": {
+          schema: updateAttachmentThumbHashRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "ThumbHash updated successfully",
+      content: {
+        "application/json": {
+          schema: updateAttachmentThumbHashResponseSchema,
+        },
+      },
+    },
+    401: { description: "Unauthorized - Authentication required" },
+    404: { description: "Attachment not found or access denied" },
+    500: { description: "Internal server error" },
   },
 });
