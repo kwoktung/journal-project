@@ -2,7 +2,7 @@ import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash";
 
 /**
  * Generates a ThumbHash from an image file
- * Uses Canvas API to resize to 20x20 and extract RGBA data
+ * Preserves original aspect ratio and resizes to ~100px on longest edge
  *
  * @param file - Image file to generate thumbhash from
  * @returns Base64-encoded thumbhash string (~25-30 bytes)
@@ -14,22 +14,38 @@ export async function generateThumbHashForImage(
     // Create image bitmap from file
     const img = await createImageBitmap(file);
 
-    // Create small canvas for thumbnail
-    const canvas = new OffscreenCanvas(20, 20);
+    // Calculate dimensions preserving aspect ratio
+    // Target 20px on longest edge for compact thumbhash
+    const maxSize = 20;
+    const aspectRatio = img.width / img.height;
+
+    let width: number;
+    let height: number;
+
+    if (img.width > img.height) {
+      width = maxSize;
+      height = Math.round(maxSize / aspectRatio);
+    } else {
+      height = maxSize;
+      width = Math.round(maxSize * aspectRatio);
+    }
+
+    // Create canvas with calculated dimensions
+    const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       console.error("Failed to get canvas context");
       return null;
     }
 
-    // Draw resized image
-    ctx.drawImage(img, 0, 0, 20, 20);
+    // Draw resized image preserving aspect ratio
+    ctx.drawImage(img, 0, 0, width, height);
 
     // Get RGBA pixel data
-    const imageData = ctx.getImageData(0, 0, 20, 20);
+    const imageData = ctx.getImageData(0, 0, width, height);
 
-    // Generate thumbhash from RGBA data
-    const thumbHash = rgbaToThumbHash(20, 20, imageData.data);
+    // Generate thumbhash from RGBA data with correct dimensions
+    const thumbHash = rgbaToThumbHash(width, height, imageData.data);
 
     // Convert to base64 for storage
     return btoa(String.fromCharCode(...thumbHash));
@@ -118,7 +134,7 @@ async function extractVideoFrame(
 
 /**
  * Generates a ThumbHash from a video file
- * Extracts frame at 0.5s and generates thumbhash from it
+ * Extracts frame at 0.5s and generates thumbhash preserving aspect ratio
  *
  * @param file - Video file to generate thumbhash from
  * @returns Base64-encoded thumbhash string (~25-30 bytes)
@@ -134,8 +150,24 @@ export async function generateThumbHashForVideo(
       return null;
     }
 
-    // Create small canvas for thumbnail
-    const canvas = new OffscreenCanvas(20, 20);
+    // Calculate dimensions preserving aspect ratio
+    // Target 20px on longest edge for compact thumbhash
+    const maxSize = 20;
+    const aspectRatio = frameImageData.width / frameImageData.height;
+
+    let width: number;
+    let height: number;
+
+    if (frameImageData.width > frameImageData.height) {
+      width = maxSize;
+      height = Math.round(maxSize / aspectRatio);
+    } else {
+      height = maxSize;
+      width = Math.round(maxSize * aspectRatio);
+    }
+
+    // Create canvas with calculated dimensions
+    const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext("2d");
     if (!ctx) {
       console.error("Failed to get canvas context");
@@ -156,14 +188,14 @@ export async function generateThumbHashForVideo(
     // Put the frame data on temp canvas
     tempCtx.putImageData(frameImageData, 0, 0);
 
-    // Draw resized frame to small canvas
-    ctx.drawImage(tempCanvas, 0, 0, 20, 20);
+    // Draw resized frame preserving aspect ratio
+    ctx.drawImage(tempCanvas, 0, 0, width, height);
 
-    // Get RGBA pixel data from small canvas
-    const thumbnailImageData = ctx.getImageData(0, 0, 20, 20);
+    // Get RGBA pixel data
+    const thumbnailImageData = ctx.getImageData(0, 0, width, height);
 
-    // Generate thumbhash from RGBA data
-    const thumbHash = rgbaToThumbHash(20, 20, thumbnailImageData.data);
+    // Generate thumbhash from RGBA data with correct dimensions
+    const thumbHash = rgbaToThumbHash(width, height, thumbnailImageData.data);
 
     // Convert to base64 for storage
     return btoa(String.fromCharCode(...thumbHash));

@@ -171,14 +171,14 @@ export function ImageGrid({ attachments, onImageClick }: ImageGridProps) {
           uri={attachments[0].uri}
           thumbHash={attachments[0].thumbHash}
           onClick={() => handleClick(0)}
-          className="aspect-[7/8]"
+          className="aspect-7/8"
           priority
         />
         <GridMediaWithUpdate
           uri={attachments[1].uri}
           thumbHash={attachments[1].thumbHash}
           onClick={() => handleClick(1)}
-          className="aspect-[7/8]"
+          className="aspect-7/8"
           priority
         />
       </div>
