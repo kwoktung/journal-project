@@ -82,7 +82,7 @@
     "dotenv": "^17.2.1",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9",
-    "eslint-config-next": "15.4.8",
+    "eslint-config-next": "16.1.4",
     "eslint-plugin-drizzle": "^0.2.3",
     "openapi-typescript-codegen": "^0.29.0",
     "prettier": "3.6.2",
